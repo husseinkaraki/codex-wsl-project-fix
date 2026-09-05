@@ -23,19 +23,19 @@ class PathTranslationTests(unittest.TestCase):
     def test_wsl_dollar_unc(self) -> None:
         self.assertEqual(
             proxy.translate_path(
-                r"\\wsl$\Ubuntu\home\karak\dev\graph-manager",
+                r"\\wsl$\Ubuntu\home\alice\dev\example",
                 "Ubuntu",
             ),
-            "/home/karak/dev/graph-manager",
+            "/home/alice/dev/example",
         )
 
     def test_extended_wsl_localhost_unc(self) -> None:
         self.assertEqual(
             proxy.translate_path(
-                r"\\?\UNC\wsl.localhost\Ubuntu\home\karak\dev\graph-manager",
+                r"\\?\UNC\wsl.localhost\Ubuntu\home\alice\dev\example",
                 "Ubuntu",
             ),
-            "/home/karak/dev/graph-manager",
+            "/home/alice/dev/example",
         )
 
     def test_absolute_drive_path(self) -> None:
@@ -48,11 +48,11 @@ class PathTranslationTests(unittest.TestCase):
         self.assertEqual(proxy.translate_path(r"D:example", "Ubuntu"), r"D:example")
 
     def test_linux_path_is_unchanged(self) -> None:
-        value = "/home/karak/dev/graph-manager"
+        value = "/home/alice/dev/example"
         self.assertEqual(proxy.translate_path(value, "Ubuntu"), value)
 
     def test_other_wsl_distribution_is_unchanged(self) -> None:
-        value = r"\\wsl$\Debian\home\karak\dev\graph-manager"
+        value = r"\\wsl$\Debian\home\alice\dev\example"
         self.assertEqual(proxy.translate_path(value, "Ubuntu"), value)
 
 
@@ -66,7 +66,7 @@ class WireProtocolTests(unittest.TestCase):
                     "params": {
                         "name": "Graph Manager",
                         "roots": [
-                            {"path": r"\\wsl$\Ubuntu\home\karak\dev\graph-manager"},
+                            {"path": r"\\wsl$\Ubuntu\home\alice\dev\example"},
                             {"path": r"C:\code\shared", "label": "shared"},
                         ],
                     },
@@ -75,7 +75,7 @@ class WireProtocolTests(unittest.TestCase):
                 self.assertEqual(changes, 2)
                 self.assertEqual(
                     [root["path"] for root in rewritten["params"]["roots"]],
-                    ["/home/karak/dev/graph-manager", "/mnt/c/code/shared"],
+                    ["/home/alice/dev/example", "/mnt/c/code/shared"],
                 )
                 self.assertEqual(rewritten["params"]["roots"][1]["label"], "shared")
                 self.assertEqual(rewritten["id"], request["id"])
@@ -123,11 +123,12 @@ class ProcessProxyTests(unittest.TestCase):
                 "method": "project/import",
                 "params": {
                     "roots": [
-                        {"path": r"\\wsl.localhost\Ubuntu\home\karak\dev\graph-manager"}
+                        {"path": r"\\wsl.localhost\Ubuntu\home\alice\dev\example"}
                     ]
                 },
             }
             environment = os.environ.copy()
+            environment.pop("CODEX_FIXES_PROXY_ACTIVE", None)
             environment.update(
                 {
                     "CODEX_CLI_PATH": os.fspath(PROXY_PATH),
@@ -148,7 +149,7 @@ class ProcessProxyTests(unittest.TestCase):
             response = json.loads(result.stdout)
             self.assertEqual(
                 response["params"]["roots"][0]["path"],
-                "/home/karak/dev/graph-manager",
+                "/home/alice/dev/example",
             )
             self.assertFalse(response["childSawSelector"])
 

@@ -1,31 +1,45 @@
-# Codex WSL project-path fix
+# Codex Desktop WSL project-path fix
 
-This is a temporary fix for the [Codex Desktop Windows/WSL project bug](https://github.com/openai/codex/issues/41290)
-that sends Windows or UNC project paths to its WSL app-server.
+An unofficial, temporary workaround for
+[openai/codex#41290](https://github.com/openai/codex/issues/41290). Codex
+Desktop can send Windows or UNC project roots to its Linux app-server unchanged,
+which breaks project creation in WSL mode.
 
-On this computer, the fix is installed at
-`C:\Users\karak\CodexFixes\codex-app-server-proxy`, and the Windows user
-environment variable `CODEX_CLI_PATH` points to that file.
+The proxy rewrites only project root paths and passes all other traffic through
+unchanged.
 
-## How it works
+```mermaid
+flowchart LR
+    D[Codex Desktop] -->|CODEX_CLI_PATH launches| P[Path proxy]
+    P -->|Windows or UNC roots become WSL paths| A[Bundled Codex app-server]
+    A -->|Responses unchanged| P
+    P -->|Responses unchanged| D
+```
 
-The Windows user environment variable `CODEX_CLI_PATH` points Codex Desktop to
-`%USERPROFILE%\CodexFixes\codex-app-server-proxy`.
+## Install
 
-Codex starts that small proxy instead of starting its bundled CLI directly. The
-proxy starts the real bundled CLI and relays its JSON-RPC traffic. It changes
-only the root paths in `project/create`, `project/import`, and `project/update`;
-all other traffic passes through unchanged. It runs only while Codex is open.
+Requirements: Codex Desktop on Windows using a WSL agent, with Python 3 inside
+that WSL distribution.
 
-## Normal use
+1. Copy [`codex-app-server-proxy`](./codex-app-server-proxy) to a permanent
+   Windows location visible to WSL, such as
+   `C:\Users\<you>\CodexFixes\codex-app-server-proxy`.
+2. Mark the copied file executable from WSL.
+3. Create a Windows **user** environment variable named `CODEX_CLI_PATH` that
+   points to the copied file.
+4. Fully quit Codex, including the tray process, and reopen it.
 
-After installation, fully quit and reopen Codex once. Then create projects from
-the normal Codex interface. Nothing needs to be run for each project.
+Done. Create projects normally; there is no per-project step or background
+service.
 
-## Remove it after the Windows bug is fixed
+Alternatively, run [`install-fix.ps1`](./install-fix.ps1) from a normal Windows
+PowerShell window to perform steps 1–3 automatically.
 
-Fully quit Codex, including its tray process, and run `remove-fix.ps1` from
-PowerShell. It deletes `CODEX_CLI_PATH` and the installed proxy. With that
-environment variable gone, Codex automatically returns to its bundled CLI.
+## Remove
 
-`install-fix.ps1` reinstalls the proxy and user environment variable if needed.
+Fully quit Codex and run [`remove-fix.ps1`](./remove-fix.ps1), or delete the
+`CODEX_CLI_PATH` user variable and the copied proxy file. Codex will return to
+its bundled CLI after reopening.
+
+`CODEX_CLI_PATH` is an undocumented internal override, so remove this workaround
+after Codex fixes the upstream bug. This workaround is for WSL agent mode only.
