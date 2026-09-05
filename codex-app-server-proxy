@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+"""Narrow JSON-RPC proxy for Codex Desktop's Windows-to-WSL project paths."""
+
+# codex-fixes-project-path-proxy-v1
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import re
+import signal
+import subprocess
+import sys
+import threading
+from typing import Any, Iterable
+
+
+VERSION = "1.0.0"
+MARKER = "codex-fixes-project-path-proxy-v1"
+PROJECT_METHODS = frozenset(
+    {"project/create", "project/import", "project/update"}
+)
+
+
+def translate_path(value: str, distro: str | None) -> str:
+    """Return the WSL path equivalent of a Windows drive or WSL UNC path."""
+    if not value or "\0" in value:
+        return value
+
+    path = value
+    folded = path.casefold()
+    if folded.startswith("\\\\?\\unc\\"):
+        path = "\\\\" + path[8:]
+    elif path.startswith("\\\\?\\"):
+        path = path[4:]
+
+    normalized = path.replace("\\", "/")
+    unc = re.match(
+        r"^//(?:wsl\$|wsl\.localhost)/([^/]+)(/.*)?$",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    if unc:
+        requested_distro = unc.group(1)
+        if distro and requested_distro.casefold() != distro.casefold():
+            return value
+        return re.sub(r"/{2,}", "/", unc.group(2) or "/")
+
+    drive = re.match(r"^([A-Za-z]):/(.*)$", normalized)
+    if drive:
+        drive_letter = drive.group(1).lower()
+        tail = drive.group(2)
+        return f"/mnt/{drive_letter}/{tail}".rstrip("/")
+
+    return value
+
+
+def rewrite_message(message: Any, distro: str | None) -> tuple[Any, int]:
+    """Rewrite only root paths in the three affected project requests."""
+    if not isinstance(message, dict) or message.get("method") not in PROJECT_METHODS:
+        return message, 0
+
+    params = message.get("params")
+    if not isinstance(params, dict) or not isinstance(params.get("roots"), list):
+        return message, 0
+
+    rewritten_roots: list[Any] = []
+    changes = 0
+    for root in params["roots"]:
+        if not isinstance(root, dict) or not isinstance(root.get("path"), str):
+            rewritten_roots.append(root)
+            continue
+        translated = translate_path(root["path"], distro)
+        if translated == root["path"]:
+            rewritten_roots.append(root)
+            continue
+        rewritten_roots.append({**root, "path": translated})
+        changes += 1
+
+    if not changes:
+        return message, 0
+    return {
+        **message,
+        "params": {**params, "roots": rewritten_roots},
+    }, changes
+
+
+def rewrite_wire_line(line: bytes, distro: str | None) -> tuple[bytes, int]:
+    """Preserve unrelated JSONL bytes exactly; re-encode only changed requests."""
+    if b"project/" not in line:
+        return line, 0
+
+    ending = b"\r\n" if line.endswith(b"\r\n") else b"\n" if line.endswith(b"\n") else b""
+    payload = line[: -len(ending)] if ending else line
+    try:
+        message = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return line, 0
+
+    rewritten, changes = rewrite_message(message, distro)
+    if not changes:
+        return line, 0
+    encoded = json.dumps(
+        rewritten,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return encoded + (ending or b"\n"), changes
+
+
+def _state_dir() -> Path:
+    base = os.environ.get("XDG_STATE_HOME")
+    if base:
+        return Path(base).expanduser() / "codex-fixes"
+    return Path.home() / ".local/state/codex-fixes"
+
+
+def _log(message: str) -> None:
+    try:
+        directory = _state_dir()
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (directory / "proxy.log").open("a", encoding="utf-8") as stream:
+            stream.write(message.rstrip() + "\n")
+    except OSError:
+        pass
+
+
+def _looks_like_proxy(path: Path) -> bool:
+    try:
+        with path.open("rb") as stream:
+            return MARKER.encode("ascii") in stream.read(4096)
+    except OSError:
+        return False
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    try:
+        return left.samefile(right)
+    except OSError:
+        return left.resolve(strict=False) == right.resolve(strict=False)
+
+
+def _codex_home_path() -> Path | None:
+    raw = os.environ.get("CODEX_HOME")
+    if not raw:
+        return None
+    translated = translate_path(raw, os.environ.get("WSL_DISTRO_NAME"))
+    return Path(translated).expanduser()
+
+
+def _cached_codex_candidates(root: Path) -> list[Path]:
+    candidates: list[tuple[int, Path]] = []
+    try:
+        for candidate in (root / "bin/wsl").glob("*/codex"):
+            try:
+                candidates.append((candidate.stat().st_mtime_ns, candidate))
+            except OSError:
+                continue
+    except OSError:
+        return []
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [candidate for _, candidate in candidates]
+
+
+def _candidate_paths() -> Iterable[Path]:
+    explicit = os.environ.get("CODEX_FIXES_REAL_CODEX")
+    if explicit:
+        yield Path(explicit).expanduser()
+
+    codex_home = _codex_home_path()
+    if codex_home is not None:
+        yield from _cached_codex_candidates(codex_home)
+
+    for raw_directory in os.environ.get("PATH", "").split(os.pathsep):
+        if raw_directory:
+            yield Path(raw_directory).expanduser() / "codex"
+
+    yield Path("/usr/local/bin/codex")
+    yield Path("/usr/bin/codex")
+
+
+def find_real_codex(self_path: Path | None = None) -> Path:
+    own_path = (self_path or Path(__file__)).resolve(strict=False)
+    seen: set[str] = set()
+    for candidate in _candidate_paths():
+        resolved = candidate.resolve(strict=False)
+        key = os.fspath(resolved)
+        if key in seen:
+            continue
+        seen.add(key)
+        if not candidate.is_file() or not os.access(candidate, os.X_OK):
+            continue
+        if _same_file(candidate, own_path) or _looks_like_proxy(candidate):
+            continue
+        return candidate
+    raise RuntimeError(
+        "the bundled WSL Codex executable was not found under CODEX_HOME or PATH"
+    )
+
+
+def _child_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    # The real CLI should see the same environment it normally receives, not
+    # the Desktop-only selector that points back at this proxy.
+    environment.pop("CODEX_CLI_PATH", None)
+    environment["CODEX_FIXES_PROXY_ACTIVE"] = "1"
+    return environment
+
+
+def _copy_stream(source: Any, destination: Any) -> None:
+    try:
+        while True:
+            block = source.read(65536)
+            if not block:
+                break
+            destination.write(block)
+            destination.flush()
+    except (BrokenPipeError, OSError):
+        pass
+
+
+def _forward_requests(
+    source: Any,
+    destination: Any,
+    distro: str | None,
+    translated_count: list[int],
+) -> None:
+    try:
+        for line in source:
+            rewritten, changes = rewrite_wire_line(line, distro)
+            translated_count[0] += changes
+            destination.write(rewritten)
+            destination.flush()
+    except (BrokenPipeError, OSError):
+        pass
+    finally:
+        try:
+            destination.close()
+        except OSError:
+            pass
+
+
+def run_proxy(real_codex: Path, arguments: list[str], distro: str | None) -> int:
+    process = subprocess.Popen(
+        [os.fspath(real_codex), *arguments],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=_child_environment(),
+        bufsize=0,
+    )
+    assert process.stdin is not None
+    assert process.stdout is not None
+    assert process.stderr is not None
+
+    translated_count = [0]
+    request_thread = threading.Thread(
+        target=_forward_requests,
+        args=(sys.stdin.buffer, process.stdin, distro, translated_count),
+        daemon=True,
+    )
+    response_thread = threading.Thread(
+        target=_copy_stream,
+        args=(process.stdout, sys.stdout.buffer),
+        daemon=True,
+    )
+    error_thread = threading.Thread(
+        target=_copy_stream,
+        args=(process.stderr, sys.stderr.buffer),
+        daemon=True,
+    )
+    request_thread.start()
+    response_thread.start()
+    error_thread.start()
+
+    previous_handlers: dict[int, Any] = {}
+
+    def forward_signal(number: int, _frame: Any) -> None:
+        try:
+            process.send_signal(number)
+        except OSError:
+            pass
+
+    for number in (signal.SIGINT, signal.SIGTERM):
+        previous_handlers[number] = signal.signal(number, forward_signal)
+
+    result = 1
+    try:
+        result = process.wait()
+    finally:
+        try:
+            process.stdin.close()
+        except OSError:
+            pass
+        response_thread.join(timeout=2)
+        error_thread.join(timeout=2)
+        for number, handler in previous_handlers.items():
+            signal.signal(number, handler)
+        if translated_count[0]:
+            _log(
+                f"session complete: translated {translated_count[0]} project "
+                f"root path(s); child exit={result}"
+            )
+    return result
+
+
+def _doctor(real_codex: Path) -> int:
+    try:
+        result = subprocess.run(
+            [os.fspath(real_codex), "--version"],
+            capture_output=True,
+            check=False,
+            env=_child_environment(),
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f"Codex Fixes proxy check failed: {error}", file=sys.stderr)
+        return 1
+    version = (result.stdout or result.stderr).strip()
+    if result.returncode != 0 or not version:
+        print("Codex Fixes proxy found the CLI, but it did not run successfully", file=sys.stderr)
+        return 1
+    print(f"proxy {VERSION}: ready")
+    print(f"real CLI: {version}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments == ["--codex-fixes-version"]:
+        print(VERSION)
+        return 0
+
+    try:
+        real_codex = find_real_codex(Path(__file__))
+    except RuntimeError as error:
+        print(f"Codex Fixes proxy: {error}", file=sys.stderr)
+        return 127
+
+    if arguments == ["--codex-fixes-doctor"]:
+        return _doctor(real_codex)
+
+    if "app-server" not in arguments:
+        os.execve(
+            os.fspath(real_codex),
+            [os.fspath(real_codex), *arguments],
+            _child_environment(),
+        )
+        return 127
+
+    if os.environ.get("CODEX_FIXES_PROXY_ACTIVE") == "1":
+        print("Codex Fixes proxy refused a recursive app-server launch", file=sys.stderr)
+        return 126
+
+    distro = os.environ.get("WSL_DISTRO_NAME")
+    _log(f"session start: distro={distro or 'unknown'}; proxy={VERSION}")
+    return run_proxy(real_codex, arguments, distro)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
