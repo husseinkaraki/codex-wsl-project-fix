@@ -1,12 +1,16 @@
 # Codex WSL project-path fix
 
-This is a temporary fix for the Codex Desktop bug that sends Windows or UNC
-project paths to its WSL app-server.
+This is a temporary fix for the [Codex Desktop Windows/WSL project bug](https://github.com/openai/codex/issues/41290)
+that sends Windows or UNC project paths to its WSL app-server.
+
+On this computer, the fix is installed at
+`C:\Users\karak\CodexFixes\codex-app-server-proxy`, and the Windows user
+environment variable `CODEX_CLI_PATH` points to that file.
 
 ## How it works
 
 The Windows user environment variable `CODEX_CLI_PATH` points Codex Desktop to
-`%LOCALAPPDATA%\CodexFixes\codex-app-server-proxy`.
+`%USERPROFILE%\CodexFixes\codex-app-server-proxy`.
 
 Codex starts that small proxy instead of starting its bundled CLI directly. The
 proxy starts the real bundled CLI and relays its JSON-RPC traffic. It changes

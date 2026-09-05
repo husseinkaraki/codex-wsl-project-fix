@@ -3,9 +3,13 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+trap {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
 
 $variableName = 'CODEX_CLI_PATH'
-$installDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CodexFixes'
+$installDirectory = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'CodexFixes'
 $installedProxy = Join-Path $installDirectory 'codex-app-server-proxy'
 
 function Send-EnvironmentChanged {

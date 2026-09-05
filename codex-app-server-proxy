@@ -230,6 +230,8 @@ def _forward_requests(
         for line in source:
             rewritten, changes = rewrite_wire_line(line, distro)
             translated_count[0] += changes
+            if changes:
+                _log(f"translated {changes} project root path(s)")
             destination.write(rewritten)
             destination.flush()
     except (BrokenPipeError, OSError):

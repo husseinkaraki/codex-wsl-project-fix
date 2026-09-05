@@ -3,11 +3,25 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+trap {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
 
 $variableName = 'CODEX_CLI_PATH'
-$installDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CodexFixes'
+$installDirectory = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'CodexFixes'
 $sourceProxy = Join-Path $PSScriptRoot 'codex-app-server-proxy'
 $installedProxy = Join-Path $installDirectory 'codex-app-server-proxy'
+$wslExecutable = Join-Path $env:WINDIR 'System32\wsl.exe'
+
+function Convert-ToWslPath([string]$WindowsPath) {
+    if ($WindowsPath -notmatch '^([A-Za-z]):\\(.*)$') {
+        throw "Expected a local Windows drive path, got: $WindowsPath"
+    }
+    $drive = $Matches[1].ToLowerInvariant()
+    $tail = $Matches[2].Replace('\', '/')
+    return "/mnt/$drive/$tail"
+}
 
 function Send-EnvironmentChanged {
     if (-not ('CodexFixes.EnvironmentBroadcast' -as [type])) {
@@ -65,24 +79,22 @@ try {
     Remove-Item -LiteralPath $temporaryProxy -Force -ErrorAction SilentlyContinue
 }
 
-$linuxProxy = (& wsl.exe --exec wslpath -u $installedProxy | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $linuxProxy) {
-    throw 'WSL could not translate the installed proxy path.'
-}
+$linuxProxy = Convert-ToWslPath $installedProxy
 
-& wsl.exe --exec chmod 755 $linuxProxy
-if ($LASTEXITCODE -ne 0) {
+$chmodProcess = Start-Process -FilePath $wslExecutable -ArgumentList @(
+    '--exec', 'chmod', '755', $linuxProxy
+) -Wait -PassThru -NoNewWindow
+if ($chmodProcess.ExitCode -ne 0) {
     throw 'WSL could not mark the proxy executable.'
 }
 
 $windowsCodexHome = Join-Path $env:USERPROFILE '.codex'
-$linuxCodexHome = (& wsl.exe --exec wslpath -u $windowsCodexHome | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $linuxCodexHome) {
-    throw 'WSL could not translate the Codex home path.'
-}
+$linuxCodexHome = Convert-ToWslPath $windowsCodexHome
 
-& wsl.exe --exec env "CODEX_HOME=$linuxCodexHome" $linuxProxy --codex-fixes-doctor
-if ($LASTEXITCODE -ne 0) {
+$doctorProcess = Start-Process -FilePath $wslExecutable -ArgumentList @(
+    '--exec', 'env', "CODEX_HOME=$linuxCodexHome", $linuxProxy, '--codex-fixes-doctor'
+) -Wait -PassThru -NoNewWindow
+if ($doctorProcess.ExitCode -ne 0) {
     throw 'The installed proxy health check failed; the environment override was not changed.'
 }
 
