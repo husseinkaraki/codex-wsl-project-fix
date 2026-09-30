@@ -1,2 +1,6 @@
 __pycache__/
 *.py[cod]
+node-repl-native-cli.json
+computer-use-install.json
+computer-use-backups/
+native-runtime/
