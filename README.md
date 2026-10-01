@@ -162,6 +162,27 @@ Observed on **2026-09-30** with Codex Desktop `26.928.1915.0`, Computer Use plug
   determine the browser URL for its policy check. **This workaround does not fix
   that separate URL policy block; full Brave keyboard control remains unverified.**
 
+A further native Computer Use test on **2026-10-01**, with Desktop release
+`26.928.21956` and an active Windows desktop session, successfully enumerated
+Brave, activated its window, and captured its screenshot and accessibility
+tree. The first attempted browser click then stopped with:
+
+```text
+Computer Use has been stopped for this turn because it could not determine
+the current browser URL on Windows with enough confidence to enforce policy.
+```
+
+**Successful startup and screen capture do not establish working browser input.**
+The URL-check failure remains unresolved; this adapter does not bypass it.
+
+The same Desktop release also explicitly disables its built-in Browser Use and
+external Chrome/Brave browser integration when the agent runs in WSL. Its
+availability log reports `reason=wsl-disabled`, while the settings UI can show
+the generic organization/region availability message. Installing a browser
+extension or enabling full CDP access does not remove that WSL check. This is a
+separate finding from the native Computer Use URL-check failure, whose cause
+has not been established. The adapter repairs startup compatibility only.
+
 App consent and browser policy checks still apply. See the official
 [Computer Use documentation](https://learn.chatgpt.com/docs/computer-use) and
 [WSL documentation](https://learn.chatgpt.com/docs/windows/wsl) for the underlying
