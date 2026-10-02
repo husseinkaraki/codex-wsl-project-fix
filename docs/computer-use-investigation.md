@@ -1,8 +1,8 @@
 # Native Computer Use with a WSL agent: investigation
 
-Updated: 2026-10-02. Status: **three full native Chrome tests passed; immediate
-state reads after tab creation remain unresolved; complete accessibility
-passed once but failed its fresh-turn repeat**.
+Updated: 2026-10-02. Status: **the installed Chrome timing helper passed the
+full native new-tab/input/click test in four fresh turns, including normal native
+Chrome launch and its repeat without the experimental accessibility flag**.
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -99,6 +99,79 @@ attempted, and all Computer Use stopped immediately. **The complete-mode flag
 has not produced a reliable fix in this configuration.** Checkpoint 33 records
 the failed repeat; the launcher has not been promoted to a public fix script.
 
+### Capture timing experiment and deployment
+
+The next diagnostic changed when the **first** state request occurred after
+Ctrl+T. It did not retry a failed request. From a verified loaded HTTPS baseline,
+two fresh turns each waited 2,000 ms after the successful key action and before
+the first native capture. Both returned `chrome://new-tab-page/`, verified typed
+and committed Example Domain URLs, and clicked Learn more to IANA without a
+native error. The first action/wait/capture sequence took 2,221 ms; its repeat
+took 2,230 ms. These passes retained the complete-accessibility launch flag, so
+they established a timing candidate, not yet independence from that flag.
+
+The reviewed Windows JavaScript backend had no visible settling step comparable
+to the Linux client's action settler. This does not establish what the native
+binary does internally. A reversible first deployment wrapped that backend
+module, but the live RPC session still captured in 129 ms and stopped at URL
+verification. That edit was rolled back exactly; its original SHA-256 is
+`617d8e6e18fdde25f06d4cba2c84c994e076e05f30a8c55d09e918401c48b171`.
+No further Computer Use occurred in the failed turn.
+
+The corrected deployment hooks the **imported Sky entry facade** on its Windows
+target, which is the active RPC boundary in this session. It only delays Chrome
+capture after a successful native input or activation, calls the original
+method once with the original request, and returns its state or error unchanged.
+The native backend and URL policy are retained. The installer is guarded by
+the reviewed Sky 0.7.5 facade hash and can restore the original bytes.
+
+Resetting the idle JavaScript kernel before importing Sky activated the new
+facade; an MCP reload alone had not refreshed the module. Static inspection
+confirmed the active wrapper before any browser calls. In the affected chat,
+ordinary Sky calls then verified the loaded query13 baseline, immediate Ctrl+T
+capture of `chrome://new-tab-page/`, typing and committed query14 navigation,
+and the Learn more destination `https://www.iana.org/help/example-domains`.
+Screenshot, accessibility text, and native document URL agreed throughout.
+Ctrl+T took 80 ms, the gap before capture was 0 ms, and capture took 2,162 ms.
+There was no manual wait or native error. Checkpoint 37 records this first
+complete deployed pass. The fresh-turn repeat also passed without a kernel
+reset: query15 baseline, immediate valid New Tab, committed query16, and the IANA
+click. Ctrl+T took 81 ms, the capture call began immediately and took 2,135 ms,
+and there were no native errors or manual waits. Checkpoint 38 records both
+consecutive passes.
+
+The human's earlier explicit permission to terminate and relaunch Chrome was
+then used to exit the flagged process. Its identity was checked before stopping
+only Chrome processes in its Windows session; zero remaining processes were
+verified. In a fresh turn, ordinary native `launch_app` with the returned Chrome
+app ID succeeded in 1,005 ms, with no extra flags. Read-only Windows process
+metadata confirmed the new main process had no forced accessibility flag.
+Initial capture returned `chrome://new-tab-page/`. The full query17/query18 and
+IANA click flow passed with matching screenshot/text/URL and no native error.
+Ctrl+T took 81 ms, its immediate capture took 2,182 ms, and no manual wait or
+kernel reset was used. The normal default-browser prompt was dismissed with
+Set later; Restore pages was left available. Checkpoint 39 records the first
+standalone normal-launch pass. The final fresh-turn repeat also passed: loaded
+query19 baseline, immediate valid New Tab, committed query20, and IANA click.
+Ctrl+T took 80 ms, capture began with a zero-millisecond gap and took 2,184 ms,
+and screenshot/text/URL agreed. No manual timer, kernel reset, or native error
+occurred. The same normal Chrome main process was rechecked after the repeat;
+it still had no forced accessibility flag. Checkpoint 40 records two consecutive
+complete flows on normally launched Chrome. The installed helper therefore
+has four complete deployed passes, two independent of the startup experiment.
+
+| Installed helper test | Startup configuration | First capture after Ctrl+T | Complete flow |
+| --- | --- | --- | --- |
+| Query13/query14 | Experimental complete-accessibility flag | 2,162 ms | New Tab, typing, committed Example Domain, IANA click passed |
+| Query15/query16 repeat | Same flagged Chrome; no kernel reset | 2,135 ms | All stages passed |
+| Query17/query18 | Normal native launch; flag absence verified | 2,182 ms | Initial capture and all input stages passed |
+| Query19/query20 repeat | Same normal Chrome; no kernel reset | 2,184 ms | All stages passed |
+
+Every action-to-capture call gap was 0 ms; the helper supplied the settling
+interval internally. Native URL policy, original requests, and error propagation
+were retained. The installer and JavaScript helper tests also passed, including
+exact restoration, unknown-build refusal, and unchanged native stop handling.
+
 The previously observed native URL error is:
 
 ```text
@@ -145,9 +218,13 @@ untested proposals. Private logs and configuration are not published here.
 | Fresh New Tab observation failed before any browser input | Fresh selection, separate `get_window` and `get_window_state` phase markers, one native observation | `get_window` returned; `get_window_state` produced the original URL-confidence turn-stop; no state or input followed | Pre-input state-read failure for New Tab; later loaded HTTPS baseline succeeded; checkpoints 26–27 |
 | Need complete input acceptance in the affected chat | User prepares loaded Example Domain; select and explicitly activate a fresh native Chrome window; type, commit, observe, click, observe | Both query-bearing documents and both Learn more destinations verified in two fresh turns; no native errors | Loaded-page control verified in the existing WSL-backed chat; checkpoints 27–28 |
 | Does foreground activation alone fix New Tab? | Start from matching IANA screenshot/text/URL after explicit activation; one `Ctrl+T` followed immediately by native state refresh | Key action returned; `get_window_state` failed with the original URL-confidence stop; no further input | New Tab startup unresolved; foreground alone insufficient for this controlled attempt; checkpoint 28 |
-| Is a previously opened New Tab permanently unreadable? | One fresh read-only selection/activation/state observation, followed by a complete input test in another turn | Native `chrome://new-tab-page/` state read passed; typing, committed Example Domain navigation and IANA click all passed without native errors | Existing New Tab is usable in these later observations; immediate post-creation refresh remains unresolved; checkpoint 29 |
+| Is a previously opened New Tab permanently unreadable? | One fresh read-only selection/activation/state observation, followed by a complete input test in another turn | Native `chrome://new-tab-page/` state read passed; typing, committed Example Domain navigation and IANA click all passed without native errors | Existing New Tab was usable; immediate creation refresh was still unresolved at checkpoint 29, before the later timing helper |
 | Does opening a public URL directly in a new tab avoid the failing refresh? | From a verified IANA baseline, type the harmless fourth test URL and use native `Alt+Enter`, then immediately observe | Typing and key action returned; refresh failed with the original URL-confidence stop; tab creation and navigation were not verified | The immediate-refresh failure extends beyond blank `Ctrl+T`; no input or state read followed; checkpoint 30 |
 | Could Chrome accessibility initialization affect the first observation? | Launch the reviewed default-dry-run script after Chrome exits, verify its real startup flag, then use native Sky in the affected chat and repeat after explicit human resumption | First initial capture, immediate Ctrl+T capture, typing, and navigation passed; physical Escape interrupted click. Fresh-turn repeat still stopped immediately after Ctrl+T with the original URL-confidence error | Complete accessibility is insufficient for reliable tab creation in this configuration; not promoted as a public fix; checkpoints 31-33 |
+| Does settling before the first native capture affect the transition? | After a successful Ctrl+T from a verified loaded HTTPS page, wait 2,000 ms before the first capture; preserve normal native policy | Two fresh-turn tests completed valid New Tab capture, typing, committed navigation, and IANA clicking without a native error | Timing candidate reproduced; complete-accessibility flag still present; checkpoints 34-35 |
+| Does wrapping the Windows backend module affect the live client? | Version-guarded reversible deployment, then immediate native capture without a manual wait | Capture remained 129 ms and stopped at URL confidence; no further Computer Use that turn | First deployment did not affect the live RPC path; original backend restored; checkpoint 36 |
+| Can ordinary Sky calls use the settling candidate automatically? | Hook the imported Windows-target facade, reset the idle JavaScript kernel once before app calls, verify active wrapper, perform the full native flow without a manual timer; repeat without resetting | Both complete flows passed, including immediate valid New Tab; captures 2,162 ms and 2,135 ms; no manual waits or native errors | Two consecutive deployed passes verified; standalone normal-launch test also passed later; checkpoints 37-39 |
+| Does the timing helper depend on the complete-accessibility flag? | Authorized identity-checked Chrome termination, documented native launch without flags, real-process flag checks before/after testing, complete flow and fresh-turn repeat | Normal launch and both complete query17/query18 and query19/query20 flows passed; immediate New Tab captures 2,182 ms and 2,184 ms | Two consecutive standalone passes verified; checkpoints 39-40 |
 
 ## Proposals not adopted as fixes
 
@@ -202,8 +279,9 @@ latest checked update, not a promise that the workaround works on this machine.
   establish the live trusted service's environment; absent exposed values are
   not evidence that the child settings are missing.
 - The community request-context patch requires **Sky 0.6.2** and a different
-  exact module hash. It is not applicable to these artifacts; no vendor module
-  was patched.
+  exact module hash. It is not applicable to these artifacts; that request-context
+  patch was not applied. The later timing helper changes the separately reviewed
+  Sky 0.7.5 entry facade only.
 - Windows UI culture, installed UI culture, and ordinary culture report
   **en-US**. There is no user `ComSpec` override and the process value points to
   the standard Windows command interpreter. Those proposed explanations are
@@ -241,20 +319,25 @@ latest checked update, not a promise that the workaround works on this machine.
 ### Current research conclusion
 
 The sources support separating WSL startup repair, runtime/request-context
-repair, desktop capture, and native URL verification. Local acceptance now
+repair, desktop capture, and native URL verification. Local acceptance
 establishes a working native Chrome flow from loaded public pages in the
 affected chat. The checked reports do not provide a portable, verified native
-post-tab-creation URL fix for our current artifacts.
+post-tab-creation URL fix for our current artifacts. A locally developed,
+hash-guarded Sky facade timing helper now has four complete deployed passes with
+immediate captures. These include a complete normal native cold-launch pass and
+its fresh-turn repeat, with the real Chrome startup flag verified absent.
 Older source-level hypotheses are useful for designing the next observation;
 their binary offsets and version-pinned replacements are not compatible fixes.
 This is an investigation result, not a claim that every remaining cause has
 been ruled out or that the failure is proven to be an upstream defect.
 
-Confidence is **high** that the documented loaded-page workflow passes the
-observed acceptance tests and that a previously opened New Tab passed its full
-test. Confidence is **low** in any specific internal
-explanation for New Tab: the supported API reports the URL-confidence stop but
-does not expose the extraction, window association, or validation stage.
+Confidence is **high** for the observed complete native flows and **medium-high**
+for the local timing workaround: the first capture after tab creation now
+passes repeatedly without any manual timer, including after a normal launch.
+Confidence is **low** in any specific internal explanation: the supported API
+reports the URL-confidence stop but does not expose extraction, window
+association, or validation internals. These public-page tests do not establish
+every website, browser, desktop session, or future runtime build.
 The startup flag had **medium-low** confidence before testing. One immediate
 New Tab capture and navigation passed, but its fresh-turn repeat failed with
 the original URL-confidence stop while the real flag remained present.
@@ -263,7 +346,7 @@ configuration; the internal cause remains unverified. A prior community
 reproduction also tried a renderer-accessibility flag without resolving its
 native URL error.
 
-## Next experiments and acceptance rules
+## Experiments and acceptance rules
 
 | Experiment | Evidence to collect | Decision rule | Confidence before test |
 | --- | --- | --- | --- |
@@ -271,10 +354,13 @@ native URL error.
 | Check Windows UI language and native Document output | Read-only culture metadata and a supported native state observation on a loaded public page | If labels are English, deprioritize the language-only theory; do not change system language speculatively | Medium |
 | Distinguish action failure from immediate-refresh failure | Record which supported API call returned or failed, while retaining the original error | A native stop ends input for that turn; no blind action retry | High diagnostic value |
 | Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
-| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Completed: two full tests passed; this verifies the loaded-page workflow, while New Tab startup remains unresolved | High for verification |
-| Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Test only an evidence-backed change; the already observed New Tab stop does not justify another unchanged retry | Low until a matching implementation or diagnostic is available |
+| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Completed: original loaded-page tests and later deployed timing repeats passed; native New Tab is now verified with the timing helper | High for verification |
+| Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Local hash-guarded Sky 0.7.5 facade timing helper is implemented and live-tested; native policy and error handling retained | Low before the matching timing diagnostic; medium-high for the tested local workaround |
 | Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
 | Pre-enable complete Chrome accessibility | Authorized launcher apply, verified real flag, native initial capture, immediate Ctrl+T capture, typing, committed navigation, then a fresh-turn repeat after human resumption | Completed: first capture/navigation stages passed, click interrupted; fresh-turn repeat stopped immediately after Ctrl+T. Keep the launcher as a diagnostic, not a verified fix | Medium-low before test; high that this was insufficient in the tested configuration |
+| Settle before the first capture | One changed variable: wait after successful tab-creation input and before the first state request, with native URL checking unchanged | Completed: two full fresh-turn diagnostic flows passed; no failed capture was retried | Medium before test; high for the observed result |
+| Deploy the timing helper at the live API boundary | Hash-guarded facade edit, one idle kernel reset before import, static active-wrapper proof, immediate ordinary API captures | Completed: four full fresh-turn tests passed with no manual waits; two used normal Chrome without the experimental flag | Medium-high for the local workaround |
+| Remove the experimental flag | Authorized normal native Chrome launch, real main-process flag absence, initial capture, full flow, then a fresh-turn repeat | Completed: normal native launch and two consecutive standalone flows passed; real flag absence verified again after the repeat | Medium-high before test; high for the observed passes |
 
 Continue recording a source, its applicability, the single changed variable,
 the exact observed result, and what the result rules out for every experiment.

@@ -7,15 +7,17 @@ the fix that matches your error, or use both.
 | Fix | Symptom | Script |
 | --- | --- | --- |
 | [1. WSL project paths](#1-wsl-project-paths) | Creating or importing a project fails with `AbsolutePathBuf deserialized without a base path` | [`codex-app-server-proxy`](./codex-app-server-proxy) |
-| [2. Computer Use from WSL](#2-computer-use-from-wsl) | Computer Use fails with `sandboxCwd is not a local file URI`, or its Windows bridge tries to execute the WSL project proxy | [`node-repl-path-proxy.py`](./node-repl-path-proxy.py) |
+| [2. Computer Use from WSL](#2-computer-use-from-wsl) | Invalid WSL cwd, wrong Windows child executable, or unreliable Chrome capture immediately after input | [`node-repl-path-proxy.py`](./node-repl-path-proxy.py), optional [`fix-computer-use-chrome-timing.py`](./fix-computer-use-chrome-timing.py) |
 
-These use internal launch settings and are temporary. Remove a workaround once
-your installed Codex release fixes the corresponding problem. This repository
-does not redistribute OpenAI executables or contain user configuration.
+These use internal launch settings or a guarded runtime edit and are temporary.
+Remove a workaround once your installed Codex release fixes the corresponding
+problem. This repository does not redistribute OpenAI executables or contain
+user configuration.
 
 The [Computer Use investigation](./docs/computer-use-investigation.md) records
 the distinct failures, attempted repairs, live results, community sources, and
-remaining verification work. Browser control is still under investigation.
+remaining verification work. The startup adapter and the Chrome timing patch
+address different stages; install only the components matching your symptoms.
 
 ## 1. WSL project paths
 
@@ -192,77 +194,95 @@ input: retry in the affected chat and verify typing, navigation, and clicking.
 
 #### Live browser results
 
-Observed on **2026-09-30** with Codex Desktop `26.928.1915.0`, Computer Use plugin
-`26.928.20755`, and Ubuntu WSL2:
+The investigation separated successful startup/capture from verified browser
+input. All browser tests used the native `@oai/sky` API with the WSL agent.
 
-- The original WSL cwd was accepted and `@oai/sky` imported successfully.
-- App enumeration returned 40 installed apps, including 8 running apps.
-- Through the actual Codex Computer Use tool, Brave's GitHub window could be
-  captured, its controls read, and a search field clicked.
-- The later keyboard test stopped because Computer Use could not confidently
-  determine the browser URL for its policy check. **This workaround does not fix
-  that separate URL policy block; full Brave keyboard control remains unverified.**
+| Test stage | Observed result |
+| --- | --- |
+| WSL startup repair, September 30–October 1 | Correct cwd accepted, Sky imported, apps enumerated; later browser URL failures remained separate |
+| Brave | Native captures and some early clicks worked; later input stopped at URL confidence. Reliable Brave control remains unverified |
+| Chrome on loaded pages | Typing, committed Example Domain navigation, and the Learn more click to IANA passed in both chats; three complete affected-chat tests passed |
+| Immediate state read after Chrome tab creation | Ctrl+T and Alt+Enter returned, but immediate native capture stopped at URL verification; foreground activation alone was insufficient |
+| Forced complete Chrome accessibility | Initial New Tab capture/navigation passed, click was interrupted by physical Escape; fresh-turn repeat failed. This launcher is not a verified fix |
+| Installed Chrome timing helper, October 2 | Four complete affected-chat tests passed, including normal native launch and its repeat without the experimental flag; see below |
 
-A further native Computer Use test on **2026-10-01**, with Computer Use plugin
-`26.928.21956` and an active Windows desktop session, successfully enumerated
-Brave, activated its window, and captured its screenshot and accessibility
-tree. The first attempted browser click then stopped with:
+The [investigation ledger](./docs/computer-use-investigation.md) records each
+failure, attempted solution, primary community source, and verified result.
 
-```text
-Computer Use has been stopped for this turn because it could not determine
-the current browser URL on Windows with enough confidence to enforce policy.
+#### Chrome capture timing patch
+
+When Chrome works on a loaded page but `get_window_state` stops immediately
+after `Ctrl+T` with the URL-confidence error, the separate
+[`fix-computer-use-chrome-timing.py`](./fix-computer-use-chrome-timing.py) adds
+a short settling interval to the imported Sky API. The startup adapter alone
+does not repair this transition.
+
+The helper waits until two seconds have elapsed after successful Chrome input
+or activation before calling the original native capture once. Time already
+elapsed counts toward that interval. Other apps and other windows are unchanged.
+All original native requests, URL verification, returned state, errors, and
+physical Escape handling remain in place. It does not retry a native stop or
+replace Computer Use with a browser controller.
+
+Two diagnostic tests with a wait before the first capture passed the full
+new-tab, typing, navigation, and link-click flow. The installed helper then
+passed the same flow in two consecutive fresh turns without any explicit wait
+in the affected chat. Immediate Ctrl+T captures took 2,162 ms and 2,135 ms,
+each with a zero-millisecond gap before the capture call. A normal native Chrome
+cold launch then passed the full flow, with the real Windows main process
+confirmed to have no forced accessibility flag. That complete flow and its
+fresh-turn repeat passed; immediate New Tab captures took 2,182 ms and 2,184 ms.
+Both verified typing, committed navigation, and the Learn more click to IANA,
+with matching screenshots, accessibility text, and native document URLs.
+There were no native errors, manual waits, or kernel resets between these tests.
+Confidence is **medium-high** for this locally verified timing workaround; the
+internal URL-resolution cause remains unproven.
+
+Requirements: Python 3.11 or newer, the two script files from this checkout,
+and the reviewed **Sky 0.7.5** runtime. This is a version-specific vendor-module
+patch. It requires the original `sky.js` SHA-256
+`0123da875a2eef5648fac407fcfedad5147ef9a1616b623ad615f4c337aee285`
+and refuses other builds or conflicting later edits.
+
+Let Computer Use tasks finish before applying or restoring the patch. From a
+**WSL terminal**, preview it with the actual Sky package used by the affected
+chat; replace `<you>` and `<runtime-id>` with its installed paths:
+
+```bash
+python3 -B fix-computer-use-chrome-timing.py \
+  --sky-package '/mnt/c/Users/<you>/AppData/Local/OpenAI/Codex/runtimes/cua_node/<runtime-id>/bin/node_modules/@oai/sky'
 ```
 
-Chrome passed a separate live native test that day: typing and navigating to
-`https://example.com` succeeded, then clicking its visible **Learn more** link
-loaded `https://www.iana.org/help/example-domains`. Explicitly activating Chrome
-before capture was needed after an earlier screenshot showed foreground Codex
-while the accessibility text described Chrome.
+The default is a dry run. Append `--apply` to install. Keep
+[`chrome-action-settler.mjs`](./chrome-action-settler.mjs) beside the Python
+script. The installer saves the original facade, copies the settling module,
+and hooks only the Windows target. It leaves the native backend executable,
+Chrome profile, Codex engine, and chat permissions untouched.
 
-In a second existing chat, refreshing the stale permissions connection restored
-Chrome enumeration, opening a new tab, and typing the URL. The navigation step
-then stopped with the same URL-check error. On **2026-10-02**, the native launch
-recovered a missing targetable Chrome window, but its New Tab state read stopped
-before input. The user then loaded `https://example.com/` and put Chrome in the
-foreground. Native screenshot and accessibility capture succeeded and agreed
-on the page URL. A complete input test in that existing chat subsequently
-verified typing, committed query-bearing navigation, and a **Learn more** mouse
-click to IANA. A second fresh-turn test repeated the complete flow, starting
-from IANA and navigating to Example Domain before clicking back to IANA. Both
-tests used the native API in that affected chat and returned matching screenshot,
-accessibility, and committed document URL evidence without a native error.
+After installation, reset the **idle JavaScript session in each affected chat**
+once before importing `@oai/sky` or making browser calls. Reloading the MCP
+connection alone did not refresh the cached module in our test. Check that the
+new import has the active wrapper before using it:
 
-A subsequent controlled New Tab test explicitly activated Chrome and confirmed
-a healthy IANA baseline. `Ctrl+T` returned, but the immediate `get_window_state`
-stopped at the URL-confidence check. No typing or navigation from that tab
-followed. **Loaded-page control is verified twice; New Tab startup remains
-unresolved.** Foreground activation alone did not repair this New Tab failure.
+```js
+globalThis.sky = (await import('@oai/sky')).sky;
+nodeRepl.write(JSON.stringify({
+  target: sky.target,
+  settlingActive: Object.getOwnPropertyDescriptor(sky, 'get_window_state')
+    .value.toString().includes('deadlines'),
+}));
+```
 
-A later fresh-turn observation of that existing New Tab succeeded, returning
-the native document URL `chrome://new-tab-page/`. A third complete native test
-then verified typing `https://example.com/?codex_wsl_cua=3`, committed page
-navigation, and the Learn more click to IANA, without an API error. This shows
-that New Tab itself is not always unreadable.
+Then verify typing, committed navigation, and a visible link click through
+ordinary Sky calls, including an immediate capture after creating a new tab.
+A kernel reset is a module-loading step before a new test; do not use it to
+continue Computer Use after a native stop in the same turn.
 
-A controlled comparison used Chrome's `Alt+Enter` shortcut to open a public URL
-directly in a new tab. Typing and the key action returned, but the immediate
-state refresh again stopped at URL verification. Tab creation and committed
-navigation were not verified after that stop. **The first state read after a
-tab-creation action remains unreliable; a later successful observation does
-not repair that transition.**
-
-An authorized startup experiment then launched Chrome with
-`--force-renderer-accessibility=complete`, verified on its real Windows main
-process. In the affected chat, initial capture, `Ctrl+T` with an immediate state
-read, typing, and committed Example Domain navigation all passed. A physical
-Escape keypress stopped Computer Use during the Learn more click, so its IANA
-destination was not verified. After explicit human resumption, a fresh turn
-confirmed the same Chrome main process still had the flag and captured the
-loaded Example Domain page. `Ctrl+T` returned, but its immediate state read
-stopped with the original URL-confidence error. **The complete-accessibility
-flag did not produce a reliable fix in this configuration.** The candidate
-launcher remains a private diagnostic and has not been added as a public fix
-script.
+To remove the timing patch, run the same command with `--restore`, then reset
+the idle JavaScript session before importing Sky. Restore preserves the backup
+and refuses to overwrite a later vendor update or modified shim. Runtime paths
+can change after Codex updates; an unsupported-build result means this reviewed
+patch does not apply, not that its hash guard should be removed.
 
 #### Native Chrome workflow
 
@@ -282,10 +302,13 @@ If Computer Use ends the turn, stop input immediately. Do not use another
 controller, change policy, or reset a session to conceal that stop.
 
 **Successful startup and screen capture do not establish working browser input.**
-Chrome input has worked in live tests in both chats, with three complete
-fresh-turn tests in the affected chat: two from loaded public pages and one
-from a previously opened New Tab. Initial reads after tab creation or native
-launch remain under investigation. This adapter does not bypass the URL check.
+Chrome input has worked in live tests in both chats. The initial three complete
+tests in the affected chat used loaded pages or a previously opened New Tab.
+The separate timing patch has repeated complete installed tests, including the
+formerly failing immediate capture after tab creation, and a normal native cold
+launch test and its fresh-turn repeat without the experimental flag. Neither
+component bypasses the URL check. Brave remains unverified; Chrome is the tested
+browser.
 
 During the same testing, Desktop also explicitly disabled its built-in Browser
 Use and external Chrome/Brave browser integration when the agent runs in WSL. Its
@@ -303,6 +326,9 @@ node launch and repeat the dry run. The helper refuses missing runtime paths or
 conflicting later edits instead of silently changing them.
 
 ### Remove the Computer Use fix
+
+If you installed the optional Chrome timing patch, restore it first using its
+`--restore` command above.
 
 From a **WSL terminal**, preview removal with the same config and directory:
 
@@ -330,5 +356,14 @@ python3 -B -m unittest discover -s tests -v
 The tests cover project paths, directory identity, URI encoding, permission
 preservation, native bridge verification, unchanged JSONL transport, dry runs,
 the Desktop shutdown guard, installation, repeat installation, removal, and
-selection of the running WSL app-server for a permissions connection refresh.
-Mocked process/config tests do not establish full browser automation support.
+selection of the running WSL app-server for a permissions connection refresh,
+and guarded Chrome timing installation and restoration. Test the settling
+module separately with a current Node.js runtime:
+
+```bash
+node --test tests/test_chrome_settler.mjs
+```
+
+These tests verify delay scope, native request/result preservation, and unchanged
+error propagation without browser input. Mocked tests do not establish full
+browser automation support; the live evidence is recorded separately.
