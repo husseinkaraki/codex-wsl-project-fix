@@ -13,6 +13,10 @@ These use internal launch settings and are temporary. Remove a workaround once
 your installed Codex release fixes the corresponding problem. This repository
 does not redistribute OpenAI executables or contain user configuration.
 
+The [Computer Use investigation](./docs/computer-use-investigation.md) records
+the distinct failures, attempted repairs, live results, community sources, and
+remaining verification work. Browser control is still under investigation.
+
 ## 1. WSL project paths
 
 An unofficial, temporary workaround for
