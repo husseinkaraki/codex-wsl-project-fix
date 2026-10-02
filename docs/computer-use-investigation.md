@@ -31,6 +31,13 @@ affected existing chat, opening a tab and typing passed, but the navigation step
 ended with the native URL-confidence stop. Its page load and mouse control are
 unverified.
 
+On October 2, a later native inventory exposed no targetable Chrome window.
+The supported native launch restored one New Tab window. A fresh read-only
+baseline then returned from `get_window` but failed in `get_window_state` with
+the same URL-confidence stop, before any keyboard or mouse input. This pins
+down that attempt's failing API. An already-loaded public HTTPS baseline in the
+affected chat is still pending; the New Tab result does not establish its result.
+
 The exact unresolved error is:
 
 ```text
@@ -73,6 +80,8 @@ untested proposals. Private logs and configuration are not published here.
 | Chrome worked in one chat but remained unreliable in the affected chat | In a fresh target-chat turn, select/activate Chrome, open a new tab, type a public URL, then press Enter and refresh | New tab and typing verified; navigation step stopped; click test never ran | Current acceptance gap; checkpoint 23 |
 | New-tab input/refresh returned an uncertain outcome | Reacquire a fresh window/state before another action | Confirmed the tab had opened | The wrapper did not preserve the original cause, so the specific initial failure remains unknown; checkpoint 23 |
 | Need a reusable permissions refresh | Add `refresh-computer-use.py` with a dry run and process/pipe identity checks | 46 repository tests passed; real dry run and reload request succeeded; published in `bd9eb79` | Repairs stale MCP connections, not the native URL resolver; checkpoint 23 |
+| Native inventory later reported no targetable Chrome window | Compare native discovery with Windows process/session metadata, then use the documented native `launch_app` recovery | Chrome had a Windows main window, but native inventory returned zero; one native launch returned one Chrome New Tab window | Target visibility restored for this attempt; its previous absence and reliable browser control remain unexplained; checkpoint 26 |
+| Fresh New Tab observation failed before any browser input | Fresh selection, separate `get_window` and `get_window_state` phase markers, one native observation | `get_window` returned; `get_window_state` produced the original URL-confidence turn-stop; no state or input followed | Confirms a pre-input state-read failure for New Tab; loaded HTTPS baseline still untested; checkpoint 26 |
 
 ## Proposals that were not implemented
 
@@ -106,6 +115,7 @@ latest checked update, not a promise that the workaround works on this machine.
 | [Chrome window/tab association report #42766](https://github.com/openai/codex/issues/42766) — September 4 | Native Chrome state fails while the separate connector can list tabs | Window association is a hypothesis; the reporter's interpretation is not a maintainer-confirmed diagnosis |
 | [Same-SDK current-build report #45996](https://github.com/openai/codex/issues/45996#issuecomment-5948262149) — October 2 | Native Edge URL determination still fails on Sky 0.7.5 and package 26.930.2377.0 after the separate browser integration works | A newer release is not a demonstrated universal fix; the report uses Chinese UI, so it does not establish our English-UI cause |
 | [Recent Chrome report #40474](https://github.com/openai/codex/issues/40474#issuecomment-5927363911) — October 1 | Native Chrome state fails on bundle 26.928.31416, including in a fresh chat, while Browser Use succeeds | A problem confined to one chat cannot explain every reproduction; our two-chat difference still needs a controlled comparison |
+| [Isolated Windows runtime home #27463](https://github.com/openai/codex/issues/27463) — June 10 | Author reports desktop-app control after separating Windows helper files from the shared WSL home | Its acceptance examples do not establish Chrome navigation; our current shared helper directory is empty and shell execution works, so no matching failure was demonstrated and no home change was applied |
 
 ### Local applicability checks on October 2
 
@@ -132,6 +142,12 @@ latest checked update, not a promise that the workaround works on this machine.
 - The generated launch still advertises a shared pipe, while our child adapter
   selects the previously documented per-runtime route. A shared-pipe rotation
   patch is therefore not a direct repair for the current fallback URL failure.
+- During the later zero-window audit, the actual affected-chat MCP requests
+  still carried the user's disabled permission profile. The Windows input
+  desktop was accessible `Default`, with no LogonUI process. The old
+  managed-profile parser failure and externally inaccessible-desktop symptom
+  were not reproduced; the native worker's complete effective context and the
+  reason its inventory omitted a window remain unverified.
 
 ### Current research conclusion
 
