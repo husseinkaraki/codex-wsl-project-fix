@@ -2,7 +2,8 @@
 
 Updated: 2026-10-02. Status: **the installed Chrome timing helper passed the
 full native new-tab/input/click test in four fresh turns, including normal native
-Chrome launch and its repeat without the experimental accessibility flag**.
+Chrome launch and its repeat without the experimental accessibility flag;
+independent acceptance also passed all 11 criteria, including Back and Reload**.
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -171,6 +172,56 @@ Every action-to-capture call gap was 0 ms; the helper supplied the settling
 interval internally. Native URL policy, original requests, and error propagation
 were retained. The installer and JavaScript helper tests also passed, including
 exact restoration, unknown-build refusal, and unchanged native stop handling.
+
+### Independent acceptance review
+
+After the implementation and initial results were persisted in commit
+`75fedd44a6199643741a913e2940aa6b41a15e64`, the affected WSL chat independently
+tested the installed fix using its own fresh observations and a unique public
+test URL. **All 11 acceptance criteria passed, with zero native errors.**
+The browser test ran on October 2 from 20:26:29 to 20:32:40 UTC. JSON and
+Markdown evidence were saved privately, and the chat sent its requested report
+back to the troubleshooting thread after verifying the human's authorization.
+
+The test observed the active Windows timing facade before app calls, freshly
+selected exactly one returned Chrome window, explicitly activated it, and
+inspected matching screenshot/accessibility state. It then opened New Tab,
+typed and committed its unique Example Domain URL, clicked Learn more to IANA,
+used Back to return to the exact test URL, and reloaded the page. Each action
+had an immediate native capture in the same JavaScript cell.
+
+| Acceptance action | Action (ms) | Gap before capture (ms) | Capture (ms) | Verified result |
+| --- | ---: | ---: | ---: | --- |
+| Activate | 230 | 0 | 2,253 | Matching IANA screenshot, native URL, and text |
+| Ctrl+T | 91 | 0 | 2,181 | `chrome://new-tab-page/` and focused address field |
+| Type unique URL | 89 | 0 | 2,170 | Exact focused field value; navigation not yet committed |
+| Return | 86 | 0 | 2,201 | Exact test URL and Example Domain page content |
+| Learn more click | 110 | 0 | 2,182 | `https://www.iana.org/help/example-domains` |
+| Back | 131 | 0 | 2,197 | Exact test URL, rendered page, and accessibility body |
+| Reload | 104 | 0 | 2,163 | Same test URL and correct page content |
+
+The evidence recorded no manual timers, kernel resets, implementation edits,
+startup-flag changes, alternate controllers, or shell UI actions. The prior
+three tabs were retained, one test tab was added, and Restore pages remained
+available. This independent turn did not cold-launch Chrome or inspect its
+process flags; those checks belong to the earlier normal-launch tests and
+separate root metadata inspection.
+
+One field limitation was preserved: after Back, `document_text` contained only
+the URL. The already-returned accessibility tree contained the correct body and
+Learn more link, and the native RootWebArea URL and screenshot agreed. Back
+passed using that corroboration, without an extra capture or recovery loop.
+Reload returned the full expected body in `document_text` again.
+
+The troubleshooting thread reviewed the saved JSON/Markdown and executed API
+calls, checked all 11 criteria, seven captures, zero native errors, timing
+arithmetic, zero caller delays, and tab preservation. It also verified that no
+manual timer or session reset appeared in the test calls. The acceptance verdict
+is **PASS for this current native Chrome configuration**; it does not establish
+every browser/site/runtime or acceptance of the Zmodo application's product
+flows. Private reports retain the exact test-turn identity and unique query URL;
+screenshots, session/auth data, unrelated browser contents, and machine-specific
+paths are not included in this public summary.
 
 The previously observed native URL error is:
 

@@ -238,6 +238,12 @@ There were no native errors, manual waits, or kernel resets between these tests.
 Confidence is **medium-high** for this locally verified timing workaround; the
 internal URL-resolution cause remains unproven.
 
+An independent acceptance run in the affected WSL chat then passed **all 11
+criteria**, including Back and Reload, with zero native errors. Its first
+post-Ctrl+T capture took 2,181 ms with no caller delay. The
+[acceptance review](./docs/computer-use-investigation.md#independent-acceptance-review)
+records the timings, observed URLs, and the Back text-field limitation.
+
 Requirements: Python 3.11 or newer, the two script files from this checkout,
 and the reviewed **Sky 0.7.5** runtime. This is a version-specific vendor-module
 patch. It requires the original `sky.js` SHA-256
@@ -298,6 +304,9 @@ the document URL and page content. After each input, obtain fresh state; a norma
 loading snapshot may need another read-only observation before the next action.
 Verify a visible link click by reading its destination. Preserve each API's
 original error and record whether input returned before its refresh failed.
+After Back, `document_text` contained only the URL in the acceptance test;
+the native document URL, accessibility tree, and screenshot still verified
+the correct page. Use those returned sources to corroborate page content.
 If Computer Use ends the turn, stop input immediately. Do not use another
 controller, change policy, or reset a session to conceal that stop.
 
