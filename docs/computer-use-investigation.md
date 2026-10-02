@@ -1,6 +1,7 @@
 # Native Computer Use with a WSL agent: investigation
 
-Updated: 2026-10-02. Status: **active; reliable browser control is not yet established**.
+Updated: 2026-10-02. Status: **active; loaded-page Chrome control verified twice;
+New Tab startup unresolved**.
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -26,17 +27,32 @@ flowchart TD
 
 The URI and Windows-child launch repairs have cleared startup failures. Reloading
 MCP connections cleared stale permissions in the affected chat. Chrome keyboard
-and mouse navigation passed in the troubleshooting chat on October 1. In the
-affected existing chat, opening a tab and typing passed, but the navigation step
-ended with the native URL-confidence stop. Its page load and mouse control are
-unverified.
+and mouse navigation passed in the troubleshooting chat on October 1. An earlier
+affected-chat attempt opened a tab and typed, but navigation ended with the
+native URL-confidence stop; that attempt did not verify page load or mouse control.
 
 On October 2, a later native inventory exposed no targetable Chrome window.
 The supported native launch restored one New Tab window. A fresh read-only
 baseline then returned from `get_window` but failed in `get_window_state` with
 the same URL-confidence stop, before any keyboard or mouse input. This pins
-down that attempt's failing API. An already-loaded public HTTPS baseline in the
-affected chat is still pending; the New Tab result does not establish its result.
+down that attempt's failing API.
+
+The user then loaded Example Domain and put Chrome in the foreground. A native
+read-only baseline succeeded. **Two subsequent fresh-turn tests in the existing
+affected chat each verified typing, committed navigation, and mouse clicking.**
+The typed URLs were `https://example.com/?codex_wsl_cua=1` and
+`https://example.com/?codex_wsl_cua=2`; each loaded the expected document and its
+visible Learn more link led to `https://www.iana.org/help/example-domains`.
+The second test started on IANA, establishing cross-origin navigation as well.
+Screenshot, accessibility text, and document URL agreed; neither test returned
+a native error. This satisfies the two fresh-turn input acceptance tests.
+
+A separate controlled test then explicitly activated Chrome and confirmed a
+matching IANA baseline. `Ctrl+T` returned successfully, but its immediate
+`get_window_state` produced the URL-confidence stop. No typing or navigation
+from the New Tab was attempted. **Foreground activation alone did not repair
+this failure.** The investigation remains active for New Tab startup; the two
+successful loaded-page tests do not establish a universal URL-resolver repair.
 
 The exact unresolved error is:
 
@@ -77,11 +93,13 @@ untested proposals. Private logs and configuration are not published here.
 | Browser settings displayed an organization/region availability message | Read actual availability logs and the installed frontend decision | Local `reason=wsl-disabled` and corresponding WSL checks found | This was a Browser Use availability decision, not proof of an organization/region restriction; checkpoint 15 |
 | Browser extension / Chrome developer integration might solve it | Inspect installed extension metadata and native/browser availability | Chrome extension was present; the WSL availability gate remained | Extension installation does not remove that gate; no proven native URL repair; checkpoints 14–15 |
 | Different chats appeared to have different browser capabilities | Compare actual turn and MCP permission metadata; serialize native browser tests | Managed-vs-disabled and stale permissions explained startup differences | Shared foreground can interfere with input, but it was not the demonstrated cause of the path-parser failure; checkpoints 21–23 |
-| Chrome worked in one chat but remained unreliable in the affected chat | In a fresh target-chat turn, select/activate Chrome, open a new tab, type a public URL, then press Enter and refresh | New tab and typing verified; navigation step stopped; click test never ran | Current acceptance gap; checkpoint 23 |
+| Chrome worked in one chat but remained unreliable in the affected chat | In a fresh target-chat turn, select/activate Chrome, open a new tab, type a public URL, then press Enter and refresh | New tab and typing verified; navigation step stopped; click test never ran | Earlier incomplete acceptance attempt; checkpoint 23; subsequent loaded-page tests passed at checkpoints 27–28 |
 | New-tab input/refresh returned an uncertain outcome | Reacquire a fresh window/state before another action | Confirmed the tab had opened | The wrapper did not preserve the original cause, so the specific initial failure remains unknown; checkpoint 23 |
 | Need a reusable permissions refresh | Add `refresh-computer-use.py` with a dry run and process/pipe identity checks | 46 repository tests passed; real dry run and reload request succeeded; published in `bd9eb79` | Repairs stale MCP connections, not the native URL resolver; checkpoint 23 |
-| Native inventory later reported no targetable Chrome window | Compare native discovery with Windows process/session metadata, then use the documented native `launch_app` recovery | Chrome had a Windows main window, but native inventory returned zero; one native launch returned one Chrome New Tab window | Target visibility restored for this attempt; its previous absence and reliable browser control remain unexplained; checkpoint 26 |
-| Fresh New Tab observation failed before any browser input | Fresh selection, separate `get_window` and `get_window_state` phase markers, one native observation | `get_window` returned; `get_window_state` produced the original URL-confidence turn-stop; no state or input followed | Confirms a pre-input state-read failure for New Tab; loaded HTTPS baseline still untested; checkpoint 26 |
+| Native inventory later reported no targetable Chrome window | Compare native discovery with Windows process/session metadata, then use the documented native `launch_app` recovery | Chrome had a Windows main window, but native inventory returned zero; one native launch returned one Chrome New Tab window | Target visibility restored for this attempt; its previous absence remains unexplained; checkpoint 26 |
+| Fresh New Tab observation failed before any browser input | Fresh selection, separate `get_window` and `get_window_state` phase markers, one native observation | `get_window` returned; `get_window_state` produced the original URL-confidence turn-stop; no state or input followed | Pre-input state-read failure for New Tab; later loaded HTTPS baseline succeeded; checkpoints 26–27 |
+| Need complete input acceptance in the affected chat | User prepares loaded Example Domain; select and explicitly activate a fresh native Chrome window; type, commit, observe, click, observe | Both query-bearing documents and both Learn more destinations verified in two fresh turns; no native errors | Loaded-page control verified in the existing WSL-backed chat; checkpoints 27–28 |
+| Does foreground activation alone fix New Tab? | Start from matching IANA screenshot/text/URL after explicit activation; one `Ctrl+T` followed immediately by native state refresh | Key action returned; `get_window_state` failed with the original URL-confidence stop; no further input | New Tab startup unresolved; foreground alone insufficient for this controlled attempt; checkpoint 28 |
 
 ## Proposals that were not implemented
 
@@ -91,8 +109,11 @@ untested proposals. Private logs and configuration are not published here.
 | Remove permission metadata or fabricate Full Access | Not implemented; repairs preserve the actual selected profile |
 | Restrict the Windows child to a projected temporary workspace | A draft was saved but never installed; abandoned after the user selected Full Access; no effectiveness claim |
 | Replace native Computer Use with CDP, Playwright, or another MCP browser | Not implemented as a repair of the requested native mechanism |
-| Seed Chrome manually with an already loaded public HTTPS page | Proposed, not yet validated in a fresh affected-chat test |
 | Apply older binary offsets from a community patch | Not implemented; current artifact compatibility and a safe source-level repair have not been established |
+
+The previously proposed loaded-public-page baseline has now been tested. It
+enabled two complete native input tests in the affected chat, but does not
+repair the separately observed New Tab state-read failure.
 
 ## Community research ledger
 
@@ -114,8 +135,10 @@ latest checked update, not a promise that the workaround works on this machine.
 | [Current Edge reproduction #31221](https://github.com/openai/codex/issues/31221#issuecomment-5872343234) — September 28 | Sky 0.7.4 still fails after removing an obsolete CLI override, despite independently readable URL sources | Correct CLI selection is necessary but not sufficient; this newer generation has no verified native recovery in the report |
 | [Chrome window/tab association report #42766](https://github.com/openai/codex/issues/42766) — September 4 | Native Chrome state fails while the separate connector can list tabs | Window association is a hypothesis; the reporter's interpretation is not a maintainer-confirmed diagnosis |
 | [Same-SDK current-build report #45996](https://github.com/openai/codex/issues/45996#issuecomment-5948262149) — October 2 | Native Edge URL determination still fails on Sky 0.7.5 and package 26.930.2377.0 after the separate browser integration works | A newer release is not a demonstrated universal fix; the report uses Chinese UI, so it does not establish our English-UI cause |
-| [Recent Chrome report #40474](https://github.com/openai/codex/issues/40474#issuecomment-5927363911) — October 1 | Native Chrome state fails on bundle 26.928.31416, including in a fresh chat, while Browser Use succeeds | A problem confined to one chat cannot explain every reproduction; our two-chat difference still needs a controlled comparison |
+| [Recent Chrome report #40474](https://github.com/openai/codex/issues/40474#issuecomment-5927363911) — October 1 | Native Chrome state fails on bundle 26.928.31416, including in a fresh chat, while Browser Use succeeds | A problem confined to one chat cannot explain every reproduction; our affected chat now passes loaded-page tests, so New Tab state is the remaining local comparison |
 | [Isolated Windows runtime home #27463](https://github.com/openai/codex/issues/27463) — June 10 | Author reports desktop-app control after separating Windows helper files from the shared WSL home | Its acceptance examples do not establish Chrome navigation; our current shared helper directory is empty and shell execution works, so no matching failure was demonstrated and no home change was applied |
+| [Chrome New Tab state report #46200](https://github.com/openai/codex/issues/46200) — September 17 | Native Chrome enumeration succeeds but a read-only New Tab state request terminates with the URL-confidence error | Closely matches our failing API and page class; no compatible repair is established by the report; its locale and versions differ |
+| [Overlapping address-field report #34715](https://github.com/openai/codex/issues/34715) — July 22 | An Opera reporter finds an empty outer address element overlapping an inner element with a valid URL and proposes examining all candidates | A specific extraction hypothesis, not a demonstrated cause for our Chrome New Tab failure; no matching local observation or portable patch was established |
 
 ### Local applicability checks on October 2
 
@@ -152,12 +175,19 @@ latest checked update, not a promise that the workaround works on this machine.
 ### Current research conclusion
 
 The sources support separating WSL startup repair, runtime/request-context
-repair, desktop capture, and native URL verification. The checked reports do
-not provide a portable, verified native URL fix for our current artifacts.
+repair, desktop capture, and native URL verification. Local acceptance now
+establishes a working native Chrome flow from loaded public pages in the
+affected chat. The checked reports do not provide a portable, verified native
+New Tab URL fix for our current artifacts.
 Older source-level hypotheses are useful for designing the next observation;
 their binary offsets and version-pinned replacements are not compatible fixes.
 This is an investigation result, not a claim that every remaining cause has
 been ruled out or that the failure is proven to be an upstream defect.
+
+Confidence is **high** that the documented loaded-page workflow passes the
+observed two-turn acceptance test. Confidence is **low** in any specific internal
+explanation for New Tab: the supported API reports the URL-confidence stop but
+does not expose the extraction, window association, or validation stage.
 
 ## Next experiments and acceptance rules
 
@@ -166,8 +196,9 @@ been ruled out or that the failure is proven to be an upstream defect.
 | Read-only runtime consistency audit | Actual adapter parent, active runtime, Sky version, native CLI selection, plugin generation, metadata shape | Repair only a demonstrated mismatch; keep the already working layers stable | High for identifying drift; low for proving it causes the URL stop |
 | Check Windows UI language and native Document output | Read-only culture metadata and a supported native state observation on a loaded public page | If labels are English, deprioritize the language-only theory; do not change system language speculatively | Medium |
 | Distinguish action failure from immediate-refresh failure | Record which supported API call returned or failed, while retaining the original error | A native stop ends input for that turn; no blind action retry | High diagnostic value |
-| Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | A loaded-page success suggests transition/state handling; it does not yet prove startup is universally fixed | Medium |
-| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Two successful fresh-turn tests in that chat establish the immediate goal; enumeration alone never counts | High for verification |
+| Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
+| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Completed: two full tests passed; this verifies the loaded-page workflow, while New Tab startup remains unresolved | High for verification |
+| Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Test only an evidence-backed change; the already observed New Tab stop does not justify another unchanged retry | Low until a matching implementation or diagnostic is available |
 
 Continue recording a source, its applicability, the single changed variable,
 the exact observed result, and what the result rules out for every experiment.

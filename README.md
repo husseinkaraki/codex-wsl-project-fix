@@ -221,13 +221,44 @@ while the accessibility text described Chrome.
 
 In a second existing chat, refreshing the stale permissions connection restored
 Chrome enumeration, opening a new tab, and typing the URL. The navigation step
-then stopped with the same URL-check error, so page loading and mouse control
-in that chat remain unverified. The cause of this remaining failure has not been
-established.
+then stopped with the same URL-check error. On **2026-10-02**, the native launch
+recovered a missing targetable Chrome window, but its New Tab state read stopped
+before input. The user then loaded `https://example.com/` and put Chrome in the
+foreground. Native screenshot and accessibility capture succeeded and agreed
+on the page URL. A complete input test in that existing chat subsequently
+verified typing, committed query-bearing navigation, and a **Learn more** mouse
+click to IANA. A second fresh-turn test repeated the complete flow, starting
+from IANA and navigating to Example Domain before clicking back to IANA. Both
+tests used the native API in that affected chat and returned matching screenshot,
+accessibility, and committed document URL evidence without a native error.
+
+A subsequent controlled New Tab test explicitly activated Chrome and confirmed
+a healthy IANA baseline. `Ctrl+T` returned, but the immediate `get_window_state`
+stopped at the URL-confidence check. No typing or navigation from that tab
+followed. **Loaded-page control is verified twice; New Tab startup remains
+unresolved.** Foreground activation alone did not repair this New Tab failure.
+
+#### Native Chrome workflow
+
+Keep WSL selected and use the actual Computer Use `@oai/sky` API through Codex's
+JavaScript tool. Start with an active, unlocked Windows desktop and Chrome on a
+loaded public HTTPS page. In the affected chat, select a fresh returned Chrome
+window, explicitly activate it, and confirm the screenshot and accessibility
+text describe that window before entering text. Use the existing tab for the
+initial test.
+
+Verify address-field focus before typing, commit navigation, and verify both
+the document URL and page content. After each input, obtain fresh state; a normal
+loading snapshot may need another read-only observation before the next action.
+Verify a visible link click by reading its destination. Preserve each API's
+original error and record whether input returned before its refresh failed.
+If Computer Use ends the turn, stop input immediately. Do not use another
+controller, change policy, or reset a session to conceal that stop.
 
 **Successful startup and screen capture do not establish working browser input.**
-Chrome input has worked in a live test, but reliable browser control across chats
-remains unresolved. This adapter does not bypass the URL check.
+Chrome input has worked in live tests in both chats, with two complete fresh-turn
+tests in the affected chat. Fresh-tab startup remains under investigation. This
+adapter does not bypass the URL check.
 
 During the same testing, Desktop also explicitly disabled its built-in Browser
 Use and external Chrome/Brave browser integration when the agent runs in WSL. Its
