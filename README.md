@@ -145,11 +145,48 @@ it does not generate the plugin's environment or install the plugin. Use
 
 ### Permissions and validation
 
+**Select Full Access in the chat that will use Computer Use.** Each chat can
+have a different permission mode. The currently supported mode produces
+`{"type":"disabled"}` in the tool metadata; the adapter does not select that
+mode for you. Full Access relaxes the filesystem and network sandbox, while app
+consent and browser policy checks still apply.
+
 The cwd rewrite applies only when the incoming permission profile is exactly
 `{"type":"disabled"}`. Restricted, unknown, or extended profiles pass through
 unchanged. The adapter does not change that profile, switch sandbox modes, add
-app approvals, or change browser policy. Use it only for a workflow that already
-has this supported profile; other profiles are not validated by this workaround.
+app approvals, or change browser policy. Restricted WSL profiles are unsupported:
+Windows sandbox ACL setup failed on the WSL UNC workspace during testing, even
+after its permission paths were translated.
+
+#### Refresh a stale permissions connection
+
+If you selected Full Access and the tool still fails on a Linux workspace or
+permission path, its existing MCP connection may still carry the old restricted
+profile. This was observed in an existing chat on **2026-10-01**: the chat's turn
+had Full Access, but the tool received `type=managed`. Resetting the JavaScript
+session did not refresh it. Reloading the app-server's MCP connections made the
+tool receive the selected `type=disabled` profile and restored app enumeration.
+
+Keep Codex open, let active tool calls finish, and preview the separate refresh
+helper from a **WSL terminal**:
+
+```bash
+python3 -B refresh-computer-use.py \
+  --adapter '/mnt/c/Users/<you>/CodexFixes/computer-use/node-repl-path-proxy.py'
+```
+
+Use the actual installed adapter path. Add `--apply` to send the reload request.
+If more than one matching WSL app-server is running, select its PID with
+`--server-pid`. The helper checks the adapter's parent process, bundled Linux
+executable, process start time, and stdio pipe before writing the request.
+
+This refreshes the MCP connections for that app-server through
+`config/mcpServer/reload`; it can reinitialize other connected tools as well.
+It does not restart Codex or change the engine, chat permissions, app approvals,
+or browser URL checks. A reported reload request is not proof of working browser
+input: retry in the affected chat and verify typing, navigation, and clicking.
+
+#### Live browser results
 
 Observed on **2026-09-30** with Codex Desktop `26.928.1915.0`, Computer Use plugin
 `26.928.20755`, and Ubuntu WSL2:
@@ -162,7 +199,7 @@ Observed on **2026-09-30** with Codex Desktop `26.928.1915.0`, Computer Use plug
   determine the browser URL for its policy check. **This workaround does not fix
   that separate URL policy block; full Brave keyboard control remains unverified.**
 
-A further native Computer Use test on **2026-10-01**, with Desktop release
+A further native Computer Use test on **2026-10-01**, with Computer Use plugin
 `26.928.21956` and an active Windows desktop session, successfully enumerated
 Brave, activated its window, and captured its screenshot and accessibility
 tree. The first attempted browser click then stopped with:
@@ -172,11 +209,24 @@ Computer Use has been stopped for this turn because it could not determine
 the current browser URL on Windows with enough confidence to enforce policy.
 ```
 
-**Successful startup and screen capture do not establish working browser input.**
-The URL-check failure remains unresolved; this adapter does not bypass it.
+Chrome passed a separate live native test that day: typing and navigating to
+`https://example.com` succeeded, then clicking its visible **Learn more** link
+loaded `https://www.iana.org/help/example-domains`. Explicitly activating Chrome
+before capture was needed after an earlier screenshot showed foreground Codex
+while the accessibility text described Chrome.
 
-The same Desktop release also explicitly disables its built-in Browser Use and
-external Chrome/Brave browser integration when the agent runs in WSL. Its
+In a second existing chat, refreshing the stale permissions connection restored
+Chrome enumeration, opening a new tab, and typing the URL. The navigation step
+then stopped with the same URL-check error, so page loading and mouse control
+in that chat remain unverified. The cause of this remaining failure has not been
+established.
+
+**Successful startup and screen capture do not establish working browser input.**
+Chrome input has worked in a live test, but reliable browser control across chats
+remains unresolved. This adapter does not bypass the URL check.
+
+During the same testing, Desktop also explicitly disabled its built-in Browser
+Use and external Chrome/Brave browser integration when the agent runs in WSL. Its
 availability log reports `reason=wsl-disabled`, while the settings UI can show
 the generic organization/region availability message. Installing a browser
 extension or enabling full CDP access does not remove that WSL check. This is a
@@ -217,5 +267,6 @@ python3 -B -m unittest discover -s tests -v
 
 The tests cover project paths, directory identity, URI encoding, permission
 preservation, native bridge verification, unchanged JSONL transport, dry runs,
-the Desktop shutdown guard, installation, repeat installation, and removal.
+the Desktop shutdown guard, installation, repeat installation, removal, and
+selection of the running WSL app-server for a permissions connection refresh.
 Mocked process/config tests do not establish full browser automation support.
