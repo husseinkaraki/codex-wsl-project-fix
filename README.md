@@ -238,6 +238,19 @@ stopped at the URL-confidence check. No typing or navigation from that tab
 followed. **Loaded-page control is verified twice; New Tab startup remains
 unresolved.** Foreground activation alone did not repair this New Tab failure.
 
+A later fresh-turn observation of that existing New Tab succeeded, returning
+the native document URL `chrome://new-tab-page/`. A third complete native test
+then verified typing `https://example.com/?codex_wsl_cua=3`, committed page
+navigation, and the Learn more click to IANA, without an API error. This shows
+that New Tab itself is not always unreadable.
+
+A controlled comparison used Chrome's `Alt+Enter` shortcut to open a public URL
+directly in a new tab. Typing and the key action returned, but the immediate
+state refresh again stopped at URL verification. Tab creation and committed
+navigation were not verified after that stop. **The first state read after a
+tab-creation action remains unreliable; a later successful observation does
+not repair that transition.**
+
 #### Native Chrome workflow
 
 Keep WSL selected and use the actual Computer Use `@oai/sky` API through Codex's
@@ -256,9 +269,10 @@ If Computer Use ends the turn, stop input immediately. Do not use another
 controller, change policy, or reset a session to conceal that stop.
 
 **Successful startup and screen capture do not establish working browser input.**
-Chrome input has worked in live tests in both chats, with two complete fresh-turn
-tests in the affected chat. Fresh-tab startup remains under investigation. This
-adapter does not bypass the URL check.
+Chrome input has worked in live tests in both chats, with three complete
+fresh-turn tests in the affected chat: two from loaded public pages and one
+from a previously opened New Tab. Initial reads after tab creation or native
+launch remain under investigation. This adapter does not bypass the URL check.
 
 During the same testing, Desktop also explicitly disabled its built-in Browser
 Use and external Chrome/Brave browser integration when the agent runs in WSL. Its

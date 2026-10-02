@@ -1,7 +1,8 @@
 # Native Computer Use with a WSL agent: investigation
 
-Updated: 2026-10-02. Status: **active; loaded-page Chrome control verified twice;
-New Tab startup unresolved**.
+Updated: 2026-10-02. Status: **three full native Chrome tests passed; immediate
+state reads after tab creation remain unresolved; accessibility-startup
+experiment requires a manual Chrome restart**.
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -51,8 +52,25 @@ A separate controlled test then explicitly activated Chrome and confirmed a
 matching IANA baseline. `Ctrl+T` returned successfully, but its immediate
 `get_window_state` produced the URL-confidence stop. No typing or navigation
 from the New Tab was attempted. **Foreground activation alone did not repair
-this failure.** The investigation remains active for New Tab startup; the two
-successful loaded-page tests do not establish a universal URL-resolver repair.
+this failure.** The two successful loaded-page tests do not establish a universal
+URL-resolver repair.
+
+A later fresh-turn observation of the existing New Tab succeeded with matching
+screenshot/accessibility and native document URL `chrome://new-tab-page/`.
+Another fresh turn then completed typing `https://example.com/?codex_wsl_cua=3`,
+committed navigation, and the Learn more click to IANA with no native error.
+**Three complete native input tests have now passed in the affected chat.**
+
+A controlled comparison then focused the address bar on IANA, typed
+`https://example.com/?codex_wsl_cua=4`, and used Chrome's `Alt+Enter` shortcut.
+Typing and the key action returned, but the immediate `get_window_state` again
+produced the URL-confidence stop. No observation or input followed; new-tab
+creation, committed navigation, and the link destination were not verified.
+
+These observations distinguish successful use of a previously opened New Tab
+from unsuccessful immediate state reads after tab-creation actions. A
+transition or accessibility-initialization issue is a hypothesis, not a proven
+internal cause. The latter failure remains the reliability gap.
 
 The exact unresolved error is:
 
@@ -100,6 +118,9 @@ untested proposals. Private logs and configuration are not published here.
 | Fresh New Tab observation failed before any browser input | Fresh selection, separate `get_window` and `get_window_state` phase markers, one native observation | `get_window` returned; `get_window_state` produced the original URL-confidence turn-stop; no state or input followed | Pre-input state-read failure for New Tab; later loaded HTTPS baseline succeeded; checkpoints 26–27 |
 | Need complete input acceptance in the affected chat | User prepares loaded Example Domain; select and explicitly activate a fresh native Chrome window; type, commit, observe, click, observe | Both query-bearing documents and both Learn more destinations verified in two fresh turns; no native errors | Loaded-page control verified in the existing WSL-backed chat; checkpoints 27–28 |
 | Does foreground activation alone fix New Tab? | Start from matching IANA screenshot/text/URL after explicit activation; one `Ctrl+T` followed immediately by native state refresh | Key action returned; `get_window_state` failed with the original URL-confidence stop; no further input | New Tab startup unresolved; foreground alone insufficient for this controlled attempt; checkpoint 28 |
+| Is a previously opened New Tab permanently unreadable? | One fresh read-only selection/activation/state observation, followed by a complete input test in another turn | Native `chrome://new-tab-page/` state read passed; typing, committed Example Domain navigation and IANA click all passed without native errors | Existing New Tab is usable in these later observations; immediate post-creation refresh remains unresolved; checkpoint 29 |
+| Does opening a public URL directly in a new tab avoid the failing refresh? | From a verified IANA baseline, type the harmless fourth test URL and use native `Alt+Enter`, then immediately observe | Typing and key action returned; refresh failed with the original URL-confidence stop; tab creation and navigation were not verified | The immediate-refresh failure extends beyond blank `Ctrl+T`; no input or state read followed; checkpoint 30 |
+| Could Chrome accessibility initialization affect the first observation? | Check only Chrome process flags; compare Chromium's documented mode behavior; prepare a separate default-dry-run startup experiment | Current Chrome has neither force nor disable renderer-accessibility flags; launcher syntax and real dry run passed; launch was not applied | `--force-renderer-accessibility=complete` is an unverified candidate requiring human-controlled Chrome restart; confidence medium-low; checkpoint 30 |
 
 ## Proposals that were not implemented
 
@@ -110,6 +131,7 @@ untested proposals. Private logs and configuration are not published here.
 | Restrict the Windows child to a projected temporary workspace | A draft was saved but never installed; abandoned after the user selected Full Access; no effectiveness claim |
 | Replace native Computer Use with CDP, Playwright, or another MCP browser | Not implemented as a repair of the requested native mechanism |
 | Apply older binary offsets from a community patch | Not implemented; current artifact compatibility and a safe source-level repair have not been established |
+| Force complete Chrome accessibility at startup | Prepared as a separate private diagnostic launcher; dry run only; no effectiveness claim or public fix-script addition until tested |
 
 The previously proposed loaded-public-page baseline has now been tested. It
 enabled two complete native input tests in the affected chat, but does not
@@ -127,7 +149,7 @@ latest checked update, not a promise that the workaround works on this machine.
 | [Upstream native URL issue #25271](https://github.com/openai/codex/issues/25271) — open; updated September 27 | Reproductions persist across browser generations; later comments separate extension recovery from native window failure | Investigate the Windows native URL path independently of WSL startup |
 | [UIA document/focus investigation, August 29](https://github.com/openai/codex/issues/25271#issuecomment-5459908436) | Proposes stable numeric Document identity and corrected focus/refresh behavior; verified by its author on an older build | Concrete hypothesis, not a portable patch; compare local language, capture, and post-action behavior first |
 | [English-label counterexample, September 10](https://github.com/openai/codex/issues/25271#issuecomment-5618209961) | Reports native failure despite English Document labels | Do not assume changing browser/system language solves every URL failure |
-| [WinBridge Recovery](https://github.com/zemeng5208/winbridge-recovery) — source updated September 4 | Checks and repairs plugin/cache/runtime/registration drift; maintainer distinguishes URL enforcement from local consistency | Borrow its diagnostic boundaries; installing it is not evidence of a URL-resolution fix |
+| [WinBridge Recovery](https://github.com/zemeng5208/winbridge-recovery) — main commit August 23; rechecked October 2 | Checks and repairs plugin/cache/runtime/registration drift; maintainer distinguishes URL enforcement from local consistency | Borrow its diagnostic boundaries; installing it is not evidence of a URL-resolution fix |
 | [Windows Fast Patch context script](https://github.com/chen0416ccc-cpu/codex-windows-fast-patch-skill/blob/main/scripts/patch-computer-use-node-repl-context.ps1) — repository updated September 30 | A hash/version-specific SDK request-context patch for Sky 0.6.2 | Compare the actual installed SDK before considering it; its documented symptom differs from our final native stop |
 | [Cross-call context report](https://gist.github.com/MSWEIMZ/0b8368f34a20c7ab6a89d53afebde14c) — August 7 | Reports `node_repl exec context not found` and same-call recovery in native Windows | Distinct error family; do not adopt an action batch that skips the current skill's observation requirements |
 | [Rotated native-pipe repair #41453](https://github.com/openai/codex/issues/41453) — updated September 5 | Author describes refreshing an obsolete product-generated pipe identifier once after `FILE_NOT_FOUND` | Relevant to shared-connection lifecycle; our current per-runtime route is different and our final error is not missing-pipe |
@@ -139,6 +161,8 @@ latest checked update, not a promise that the workaround works on this machine.
 | [Isolated Windows runtime home #27463](https://github.com/openai/codex/issues/27463) — June 10 | Author reports desktop-app control after separating Windows helper files from the shared WSL home | Its acceptance examples do not establish Chrome navigation; our current shared helper directory is empty and shell execution works, so no matching failure was demonstrated and no home change was applied |
 | [Chrome New Tab state report #46200](https://github.com/openai/codex/issues/46200) — September 17 | Native Chrome enumeration succeeds but a read-only New Tab state request terminates with the URL-confidence error | Closely matches our failing API and page class; no compatible repair is established by the report; its locale and versions differ |
 | [Overlapping address-field report #34715](https://github.com/openai/codex/issues/34715) — July 22 | An Opera reporter finds an empty outer address element overlapping an inner element with a valid URL and proposes examining all candidates | A specific extraction hypothesis, not a demonstrated cause for our Chrome New Tab failure; no matching local observation or portable patch was established |
+| [Chromium accessibility overview](https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/accessibility/overview.md) | Accessibility normally enables on demand; an explicit `--force-renderer-accessibility=complete` keeps the full mode enabled | Supports a controlled initialization experiment; does not establish that it fixes Codex's URL resolver |
+| [Chrome keyboard shortcuts](https://support.google.com/chrome/answer/157179) | Documents address-bar `Alt+Enter` for opening a new tab | Provided a normal native-input comparison; our immediate refresh still failed after that action |
 
 ### Local applicability checks on October 2
 
@@ -171,6 +195,18 @@ latest checked update, not a promise that the workaround works on this machine.
   managed-profile parser failure and externally inaccessible-desktop symptom
   were not reproduced; the native worker's complete effective context and the
   reason its inventory omitted a window remain unverified.
+- A subsequent inventory in the affected chat returned exactly one Chrome
+  window classified as New Tab. A fresh native state observation then succeeded;
+  the earlier failure is not a demonstrated permanent New Tab restriction.
+- The active Chrome main process has no force-renderer-accessibility or
+  disable-renderer-accessibility startup switch. The prepared complete-mode
+  launcher defaults to a dry run, refuses to launch while Chrome processes
+  remain, and does not edit profile, registry, native policy, or engine settings.
+  It has not been applied.
+- Upstream issue #25271 still has 44 comments and is open; #46200 is also open.
+  The reviewed Fast Patch and WinBridge repository heads are unchanged since
+  the previous review. No newly compatible implementation was found in those
+  refreshed sources.
 
 ### Current research conclusion
 
@@ -178,16 +214,20 @@ The sources support separating WSL startup repair, runtime/request-context
 repair, desktop capture, and native URL verification. Local acceptance now
 establishes a working native Chrome flow from loaded public pages in the
 affected chat. The checked reports do not provide a portable, verified native
-New Tab URL fix for our current artifacts.
+post-tab-creation URL fix for our current artifacts.
 Older source-level hypotheses are useful for designing the next observation;
 their binary offsets and version-pinned replacements are not compatible fixes.
 This is an investigation result, not a claim that every remaining cause has
 been ruled out or that the failure is proven to be an upstream defect.
 
 Confidence is **high** that the documented loaded-page workflow passes the
-observed two-turn acceptance test. Confidence is **low** in any specific internal
+observed acceptance tests and that a previously opened New Tab passed its full
+test. Confidence is **low** in any specific internal
 explanation for New Tab: the supported API reports the URL-confidence stop but
 does not expose the extraction, window association, or validation stage.
+The startup flag has **medium-low** confidence as a candidate and remains
+untested. A prior community reproduction tried a renderer-accessibility flag
+without resolving its native URL error, so the flag is not a general solution.
 
 ## Next experiments and acceptance rules
 
@@ -199,6 +239,8 @@ does not expose the extraction, window association, or validation stage.
 | Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
 | Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Completed: two full tests passed; this verifies the loaded-page workflow, while New Tab startup remains unresolved | High for verification |
 | Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Test only an evidence-backed change; the already observed New Tab stop does not justify another unchanged retry | Low until a matching implementation or diagnostic is available |
+| Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
+| Pre-enable complete Chrome accessibility | Human exits Chrome and starts the reviewed diagnostic launcher; verify its real startup flag, then test native `Ctrl+T` plus immediate state in a fresh turn | A passing first state and complete input flow must be repeated; do not publish this candidate as a fix based on process flags alone | Medium-low |
 
 Continue recording a source, its applicability, the single changed variable,
 the exact observed result, and what the result rules out for every experiment.
