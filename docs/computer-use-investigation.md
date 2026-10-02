@@ -1,8 +1,8 @@
 # Native Computer Use with a WSL agent: investigation
 
 Updated: 2026-10-02. Status: **three full native Chrome tests passed; immediate
-state reads after tab creation remain unresolved; accessibility-startup
-experiment requires a manual Chrome restart**.
+state reads after tab creation remain unresolved; complete accessibility
+passed once but failed its fresh-turn repeat**.
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -72,7 +72,34 @@ from unsuccessful immediate state reads after tab-creation actions. A
 transition or accessibility-initialization issue is a hypothesis, not a proven
 internal cause. The latter failure remains the reliability gap.
 
-The exact unresolved error is:
+The human authorized the reviewed diagnostic launch. Its guard first refused
+because Chrome processes remained. After Chrome fully exited, the launch
+succeeded and the real Windows main process contained
+`--force-renderer-accessibility=complete`. The first native test found no window
+because the human had closed Chrome again; this did not test the flag.
+
+After an authorized relaunch, the affected chat verified an initial capture of
+`chrome://whats-new/`, `Ctrl+T` followed immediately by a successful state read
+of `chrome://new-tab-page/`, typing `https://example.com/?codex_wsl_cua=5`, and
+committed navigation with matching Example Domain content. Computer Use then
+stopped during `LEARN_MORE_CLICK` with **“Computer Use was stopped by the user
+with the physical Escape key.”** No further Computer Use occurred in that turn.
+The IANA destination was not verified. This is the first passing immediate
+New Tab capture under the candidate startup flag, but a complete flow and a
+fresh-turn repeat are still needed. It does not establish that the flag caused
+the improvement. Checkpoints 31 and 32 record the launch and partial native test.
+
+The human confirmed the Escape interruption was intentional and explicitly
+authorized resumption. Before the fresh test, the same real Chrome main process
+was checked again and still had the complete-mode flag. Native discovery,
+activation, and a matching Example Domain baseline passed. `Ctrl+T` returned,
+but `NEW_TAB_IMMEDIATE_GET_WINDOW_STATE` produced the original URL-confidence
+stop. Typing the sixth URL, committed navigation, and clicking were not
+attempted, and all Computer Use stopped immediately. **The complete-mode flag
+has not produced a reliable fix in this configuration.** Checkpoint 33 records
+the failed repeat; the launcher has not been promoted to a public fix script.
+
+The previously observed native URL error is:
 
 ```text
 Computer Use has been stopped for this turn because it could not determine
@@ -120,9 +147,9 @@ untested proposals. Private logs and configuration are not published here.
 | Does foreground activation alone fix New Tab? | Start from matching IANA screenshot/text/URL after explicit activation; one `Ctrl+T` followed immediately by native state refresh | Key action returned; `get_window_state` failed with the original URL-confidence stop; no further input | New Tab startup unresolved; foreground alone insufficient for this controlled attempt; checkpoint 28 |
 | Is a previously opened New Tab permanently unreadable? | One fresh read-only selection/activation/state observation, followed by a complete input test in another turn | Native `chrome://new-tab-page/` state read passed; typing, committed Example Domain navigation and IANA click all passed without native errors | Existing New Tab is usable in these later observations; immediate post-creation refresh remains unresolved; checkpoint 29 |
 | Does opening a public URL directly in a new tab avoid the failing refresh? | From a verified IANA baseline, type the harmless fourth test URL and use native `Alt+Enter`, then immediately observe | Typing and key action returned; refresh failed with the original URL-confidence stop; tab creation and navigation were not verified | The immediate-refresh failure extends beyond blank `Ctrl+T`; no input or state read followed; checkpoint 30 |
-| Could Chrome accessibility initialization affect the first observation? | Check only Chrome process flags; compare Chromium's documented mode behavior; prepare a separate default-dry-run startup experiment | Current Chrome has neither force nor disable renderer-accessibility flags; launcher syntax and real dry run passed; launch was not applied | `--force-renderer-accessibility=complete` is an unverified candidate requiring human-controlled Chrome restart; confidence medium-low; checkpoint 30 |
+| Could Chrome accessibility initialization affect the first observation? | Launch the reviewed default-dry-run script after Chrome exits, verify its real startup flag, then use native Sky in the affected chat and repeat after explicit human resumption | First initial capture, immediate Ctrl+T capture, typing, and navigation passed; physical Escape interrupted click. Fresh-turn repeat still stopped immediately after Ctrl+T with the original URL-confidence error | Complete accessibility is insufficient for reliable tab creation in this configuration; not promoted as a public fix; checkpoints 31-33 |
 
-## Proposals that were not implemented
+## Proposals not adopted as fixes
 
 | Proposal | Status and reason |
 | --- | --- |
@@ -131,7 +158,7 @@ untested proposals. Private logs and configuration are not published here.
 | Restrict the Windows child to a projected temporary workspace | A draft was saved but never installed; abandoned after the user selected Full Access; no effectiveness claim |
 | Replace native Computer Use with CDP, Playwright, or another MCP browser | Not implemented as a repair of the requested native mechanism |
 | Apply older binary offsets from a community patch | Not implemented; current artifact compatibility and a safe source-level repair have not been established |
-| Force complete Chrome accessibility at startup | Prepared as a separate private diagnostic launcher; dry run only; no effectiveness claim or public fix-script addition until tested |
+| Force complete Chrome accessibility at startup | Real flag verified and first immediate New Tab capture/navigation passed, but the fresh-turn repeat failed at native URL confidence; not a reliable fix and not promoted to a public fix script |
 
 The previously proposed loaded-public-page baseline has now been tested. It
 enabled two complete native input tests in the affected chat, but does not
@@ -198,11 +225,14 @@ latest checked update, not a promise that the workaround works on this machine.
 - A subsequent inventory in the affected chat returned exactly one Chrome
   window classified as New Tab. A fresh native state observation then succeeded;
   the earlier failure is not a demonstrated permanent New Tab restriction.
-- The active Chrome main process has no force-renderer-accessibility or
-  disable-renderer-accessibility startup switch. The prepared complete-mode
-  launcher defaults to a dry run, refuses to launch while Chrome processes
-  remain, and does not edit profile, registry, native policy, or engine settings.
-  It has not been applied.
+- The complete-mode launcher defaults to a dry run and refuses to launch while
+  Chrome processes remain. An authorized apply succeeded, and the real Chrome
+  main process contained `--force-renderer-accessibility=complete`. Initial
+  capture, immediate New Tab capture, typing, and committed navigation then
+  passed; the click was stopped by physical Escape. After explicit resumption,
+  the same flagged process passed its loaded-page baseline but failed the
+  immediate Ctrl+T capture again. No profile, registry, native policy, or engine
+  setting changed.
 - Upstream issue #25271 still has 44 comments and is open; #46200 is also open.
   The reviewed Fast Patch and WinBridge repository heads are unchanged since
   the previous review. No newly compatible implementation was found in those
@@ -225,9 +255,13 @@ observed acceptance tests and that a previously opened New Tab passed its full
 test. Confidence is **low** in any specific internal
 explanation for New Tab: the supported API reports the URL-confidence stop but
 does not expose the extraction, window association, or validation stage.
-The startup flag has **medium-low** confidence as a candidate and remains
-untested. A prior community reproduction tried a renderer-accessibility flag
-without resolving its native URL error, so the flag is not a general solution.
+The startup flag had **medium-low** confidence before testing. One immediate
+New Tab capture and navigation passed, but its fresh-turn repeat failed with
+the original URL-confidence stop while the real flag remained present.
+Confidence is **high** that the flag alone was insufficient in this tested
+configuration; the internal cause remains unverified. A prior community
+reproduction also tried a renderer-accessibility flag without resolving its
+native URL error.
 
 ## Next experiments and acceptance rules
 
@@ -240,7 +274,7 @@ without resolving its native URL error, so the flag is not a general solution.
 | Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | Completed: two full tests passed; this verifies the loaded-page workflow, while New Tab startup remains unresolved | High for verification |
 | Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Test only an evidence-backed change; the already observed New Tab stop does not justify another unchanged retry | Low until a matching implementation or diagnostic is available |
 | Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
-| Pre-enable complete Chrome accessibility | Human exits Chrome and starts the reviewed diagnostic launcher; verify its real startup flag, then test native `Ctrl+T` plus immediate state in a fresh turn | A passing first state and complete input flow must be repeated; do not publish this candidate as a fix based on process flags alone | Medium-low |
+| Pre-enable complete Chrome accessibility | Authorized launcher apply, verified real flag, native initial capture, immediate Ctrl+T capture, typing, committed navigation, then a fresh-turn repeat after human resumption | Completed: first capture/navigation stages passed, click interrupted; fresh-turn repeat stopped immediately after Ctrl+T. Keep the launcher as a diagnostic, not a verified fix | Medium-low before test; high that this was insufficient in the tested configuration |
 
 Continue recording a source, its applicability, the single changed variable,
 the exact observed result, and what the result rules out for every experiment.

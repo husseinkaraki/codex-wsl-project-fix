@@ -251,6 +251,19 @@ navigation were not verified after that stop. **The first state read after a
 tab-creation action remains unreliable; a later successful observation does
 not repair that transition.**
 
+An authorized startup experiment then launched Chrome with
+`--force-renderer-accessibility=complete`, verified on its real Windows main
+process. In the affected chat, initial capture, `Ctrl+T` with an immediate state
+read, typing, and committed Example Domain navigation all passed. A physical
+Escape keypress stopped Computer Use during the Learn more click, so its IANA
+destination was not verified. After explicit human resumption, a fresh turn
+confirmed the same Chrome main process still had the flag and captured the
+loaded Example Domain page. `Ctrl+T` returned, but its immediate state read
+stopped with the original URL-confidence error. **The complete-accessibility
+flag did not produce a reliable fix in this configuration.** The candidate
+launcher remains a private diagnostic and has not been added as a public fix
+script.
+
 #### Native Chrome workflow
 
 Keep WSL selected and use the actual Computer Use `@oai/sky` API through Codex's
