@@ -115,6 +115,33 @@ class ChromeTimingPatchTests(unittest.TestCase):
                     self.assertEqual(self.client.read_bytes(), plan['patched'])
                     plan[field].write_bytes(original_file)
 
+    def test_known_previous_shim_can_upgrade_without_changing_original_backup(self):
+        module.apply(module.inspect(self.package))
+        shim = self.client.with_name(module.SHIM_NAME)
+        prior = b'reviewed prior shim fixture'
+        shim.write_bytes(prior)
+        with patch.object(module, 'KNOWN_SHIM_SHA256', {hashlib.sha256(prior).hexdigest()}):
+            plan = module.inspect(self.package)
+            self.assertNotEqual(plan['current_shim_data'], plan['shim_data'])
+            module.apply(plan)
+        self.assertEqual(shim.read_bytes(), module.SHIM_SOURCE.read_bytes())
+        self.assertEqual(plan['backup'].read_bytes(), self.original)
+        self.assertEqual(self.client.read_bytes(), plan['patched'])
+        module.restore(module.inspect(self.package))
+        self.assertEqual(self.client.read_bytes(), self.original)
+
+    def test_known_previous_shim_modified_after_inspection_is_not_overwritten(self):
+        module.apply(module.inspect(self.package))
+        shim = self.client.with_name(module.SHIM_NAME)
+        prior = b'reviewed prior shim fixture'
+        shim.write_bytes(prior)
+        with patch.object(module, 'KNOWN_SHIM_SHA256', {hashlib.sha256(prior).hexdigest()}):
+            plan = module.inspect(self.package)
+            shim.write_bytes(b'modified after inspection')
+            with self.assertRaises(ValueError):
+                module.apply(plan)
+        self.assertEqual(shim.read_bytes(), b'modified after inspection')
+
 
 if __name__ == '__main__':
     unittest.main()

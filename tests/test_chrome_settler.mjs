@@ -9,6 +9,7 @@ function fixture() {
   const client = {
     target: 'windows',
     async press_key(input) { calls.push({ method: 'press_key', input, now }); return 'input-returned'; },
+    async click(input) { calls.push({ method: 'click', input, now }); return 'click-returned'; },
     async get_window_state(input) { calls.push({ method: 'capture', input, now }); return result; },
   };
   const clock = { now: () => now, async sleep(ms) { calls.push({ method: 'wait', ms }); now += ms; } };
@@ -60,6 +61,30 @@ test('time already elapsed is not added again', async () => {
   assert.equal(f.calls.filter(c => c.method === 'wait').length, 0);
 });
 
+test('navigation keys use a longer interval without repeating native input or capture', async () => {
+  for (const key of ['Return', 'KP_Enter', 'Alt_L+Return', 'F5', 'Control_L+r', 'Control_L+Shift_L+r', 'Alt_L+Left', 'Alt_L+Right']) {
+    const f = fixture();
+    installChromeSettler(f.client, { clock: f.clock });
+    const window = { app: 'Chrome', id: 1 };
+    assert.equal(await f.client.press_key({ window, key }), 'input-returned');
+    await f.client.get_window_state({ window });
+    assert.deepEqual(f.calls.map(c => c.method), ['press_key', 'wait', 'capture']);
+    assert.equal(f.calls[1].ms, 5000, key);
+  }
+});
+
+test('a navigation click preserves element and screenshot arguments and elapsed time', async () => {
+  const f = fixture();
+  installChromeSettler(f.client, { clock: f.clock });
+  const input = { window: { app: 'Chrome', id: 1 }, element_index: 20, screenshotId: 'native-id' };
+  assert.equal(await f.client.click(input), 'click-returned');
+  f.advance(3000);
+  await f.client.get_window_state({ window: input.window });
+  assert.equal(f.calls[0].input, input);
+  assert.equal(f.calls.find(c => c.method === 'wait').ms, 2000);
+  assert.equal(f.calls.at(-1).now, 5000);
+});
+
 test('native capture stop is propagated unchanged and is never retried', async () => {
   const f = fixture();
   const stop = new Error('Computer Use has been stopped for this turn');
@@ -90,4 +115,5 @@ test('installation is idempotent and bounds its configurable interval', async ()
   installChromeSettler(f.client, { clock: f.clock });
   assert.equal(f.client.get_window_state, once);
   assert.throws(() => installChromeSettler(fixture().client, { settleMs: 6000 }), /settleMs/);
+  assert.throws(() => installChromeSettler(fixture().client, { navigationSettleMs: 6000 }), /navigationSettleMs/);
 });

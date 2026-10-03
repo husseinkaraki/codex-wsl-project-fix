@@ -22,6 +22,10 @@ CLIENT_REL = Path('dist/project/cua/sky_js/src/sky.js')
 SHIM_NAME = 'wsl_chrome_settler.js'
 SHIM_SOURCE = Path(__file__).with_name('chrome-action-settler.mjs')
 BACKUP_SUFFIX = '.before-wsl-chrome-settler'
+KNOWN_SHIM_SHA256 = {
+    # Published two-second revision. Upgrade only this exact previous shim.
+    'c6aa99aa554c465a9140af84391845dac663eb0f14d3dfbdbe98ffeb8a359730',
+}
 ANCHOR = b',d=o,d}'
 REPLACEMENT = b',d=o,"windows"===o.target&&__codexWslInstallChromeSettler(d),d}'
 IMPORT = b'import{installChromeSettler as __codexWslInstallChromeSettler}from"./wsl_chrome_settler.js";'
@@ -57,14 +61,16 @@ def inspect(package):
         raise ValueError('Client changed since the reviewed build; refusing to overwrite it')
     if backup.exists() and backup.read_bytes() != original:
         raise ValueError('Existing backup differs from the reviewed original')
-    if shim.exists() and shim.read_bytes() != shim_data:
+    current_shim_data = shim.read_bytes() if shim.exists() else None
+    if (current_shim_data is not None and current_shim_data != shim_data
+            and digest(current_shim_data) not in KNOWN_SHIM_SHA256):
         raise ValueError('Existing shim differs; refusing to overwrite or remove it')
     if current == patched and not shim.is_file():
         raise ValueError('Patched client is missing its shim')
     return {
         'client': client, 'backup': backup, 'shim': shim,
         'current': current, 'original': original, 'patched': patched,
-        'shim_data': shim_data,
+        'shim_data': shim_data, 'current_shim_data': current_shim_data,
     }
 
 
@@ -91,18 +97,20 @@ def validate_plan(plan):
         raise ValueError('Installed backup or shim disappeared after inspection')
     if plan['backup'].exists() and plan['backup'].read_bytes() != plan['original']:
         raise ValueError('Backup changed after inspection; refusing to overwrite it')
-    if plan['shim'].exists() and plan['shim'].read_bytes() != plan['shim_data']:
+    current_shim_data = plan['shim'].read_bytes() if plan['shim'].exists() else None
+    if current_shim_data != plan['current_shim_data']:
         raise ValueError('Shim changed after inspection; refusing to overwrite or remove it')
 
 
 def apply(plan):
     validate_plan(plan)
-    if plan['current'] == plan['patched']:
+    if plan['current'] == plan['patched'] and plan['current_shim_data'] == plan['shim_data']:
         return 'already applied'
     if not plan['backup'].exists():
         atomic_write(plan['backup'], plan['original'])
     atomic_write(plan['shim'], plan['shim_data'])
-    atomic_write(plan['client'], plan['patched'])
+    if plan['current'] != plan['patched']:
+        atomic_write(plan['client'], plan['patched'])
     return 'applied; reset the idle JavaScript session before importing Sky, then verify it'
 
 
@@ -131,8 +139,12 @@ def main(argv=None):
         'current_sha256': digest(plan['current']),
         'original_sha256': digest(plan['original']),
         'patched_sha256': digest(plan['patched']),
-        'already_applied': plan['current'] == plan['patched'],
+        'already_applied': (plan['current'] == plan['patched']
+                            and plan['current_shim_data'] == plan['shim_data']),
+        'shim_upgrade_required': (plan['current'] == plan['patched']
+                                 and plan['current_shim_data'] != plan['shim_data']),
         'settle_ms': 2000,
+        'navigation_settle_ms': 5000,
         'native_policy_changed': False,
         'engine_changed': False,
         'browser_profile_changed': False,

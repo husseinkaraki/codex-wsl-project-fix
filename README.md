@@ -19,6 +19,21 @@ the distinct failures, attempted repairs, live results, community sources, and
 remaining verification work. The startup adapter and the Chrome timing patch
 address different stages; install only the components matching your symptoms.
 
+**Current limitation:** earlier native Chrome acceptance passed, but a later
+dev product test switched to Playwright after native observations stopped
+updating. The complete product flow through native Computer Use is still under
+investigation. The timing patch is a candidate workaround, not a universal fix.
+On October 3, a fresh normal Chrome launch still stopped at its first native
+text capture after the bridge CLI was matched to the current app. Window
+selection and activation succeeded. That capture began about 42 seconds after
+launch, so a longer startup wait alone is not an established repair.
+Later controls passed cold capture through both the diagnostic and native
+launchers, with the accessibility flag absent, while reusing a helper session
+after successful browser observations. Resetting only the JavaScript/helper
+session reproduced the first-capture stop, even with activation and capture in
+one call. Fresh-helper reliability remains unresolved; the passing controls do
+not establish that the startup flag or a different launcher fixes it.
+
 ## 1. WSL project paths
 
 An unofficial, temporary workaround for
@@ -217,8 +232,10 @@ after `Ctrl+T` with the URL-confidence error, the separate
 a short settling interval to the imported Sky API. The startup adapter alone
 does not repair this transition.
 
-The helper waits until two seconds have elapsed after successful Chrome input
-or activation before calling the original native capture once. Time already
+The helper waits until two seconds have elapsed after successful ordinary Chrome
+input or activation. Navigation-capable input (clicks, secondary actions, Enter,
+Reload and Back/Forward shortcuts) receives five seconds before the original
+native capture is called once. Time already
 elapsed counts toward that interval. Other apps and other windows are unchanged.
 All original native requests, URL verification, returned state, errors, and
 physical Escape handling remain in place. It does not retry a native stop or
@@ -235,10 +252,19 @@ fresh-turn repeat passed; immediate New Tab captures took 2,182 ms and 2,184 ms.
 Both verified typing, committed navigation, and the Learn more click to IANA,
 with matching screenshots, accessibility text, and native document URLs.
 There were no native errors, manual waits, or kernel resets between these tests.
-Confidence is **medium-high** for this locally verified timing workaround; the
-internal URL-resolution cause remains unproven.
+These are results for the earlier two-second revision. A later native dev-site
+redirect failed at capture with that revision even though navigation occurred.
+A five-second pre-capture diagnostic passed; the revised helper implements that
+longer interval for navigation-capable input. Confidence is **medium-low** in the
+revised candidate until independent native product acceptance is complete.
+It does not resolve the observed first text-capture failure after a fresh launch.
+The internal URL-resolution cause remains unproven.
+The revised helper also passed a complete public-page flow on October 3 in an
+existing helper session. A subsequent clean-helper cold test still stopped at
+native URL confidence. These tests establish the reported outcomes, not native
+product acceptance or reliable first use after a reset.
 
-An independent acceptance run in the affected WSL chat then passed **all 11
+The earlier October 2 independent acceptance run in the affected WSL chat passed **all 11
 criteria**, including Back and Reload, with zero native errors. Its first
 post-Ctrl+T capture took 2,181 ms with no caller delay. The
 [acceptance review](./docs/computer-use-investigation.md#independent-acceptance-review)
@@ -289,6 +315,11 @@ the idle JavaScript session before importing Sky. Restore preserves the backup
 and refuses to overwrite a later vendor update or modified shim. Runtime paths
 can change after Codex updates; an unsupported-build result means this reviewed
 patch does not apply, not that its hash guard should be removed.
+An app update replaced our runtime cache and removed the installed patch.
+Check the actual current runtime and wrapper after updates, then rerun the
+guarded installer only for a supported build. Updating this checkout also
+supports upgrading the exact previously published two-second shim with
+`--apply`; conflicting user edits are preserved.
 
 #### Native Chrome workflow
 
@@ -315,9 +346,10 @@ Chrome input has worked in live tests in both chats. The initial three complete
 tests in the affected chat used loaded pages or a previously opened New Tab.
 The separate timing patch has repeated complete installed tests, including the
 formerly failing immediate capture after tab creation, and a normal native cold
-launch test and its fresh-turn repeat without the experimental flag. Neither
-component bypasses the URL check. Brave remains unverified; Chrome is the tested
-browser.
+launch test and its fresh-turn repeat without the experimental flag. Those are
+historical passes; the later clean-helper failure and native product test remain
+unresolved. Neither component bypasses the URL check. Brave remains unverified;
+Chrome is the tested browser.
 
 During the same testing, Desktop also explicitly disabled its built-in Browser
 Use and external Chrome/Brave browser integration when the agent runs in WSL. Its
