@@ -1,13 +1,12 @@
 # Native Computer Use with a WSL agent: investigation
 
-Updated: 2026-10-03. Status: **investigation resumed. The two-second timing
-helper passed the earlier native acceptance tests, but a later product test
-switched to Playwright after native Chrome stopped updating. A subsequent
-native dev-site navigation reproduced the URL-confidence stop during capture.
-The affected chat's latest native product trial passed authorized test-account
-sign-in, two-file uploads, a saved quote and verified Stripe TEST MODE checkout.
-Final sandbox-payment confirmation is pending. Cold native-launch reliability
-and the complete native product flow remain unverified.**
+Updated: 2026-10-03. Status: **complete native dev-product acceptance passed in
+the affected WSL-backed chat using existing Windows Chrome. Authentication,
+uploads, actual Stripe sandbox payment, recovery, GUI downloads, native
+playback/seek and receipt were exercised through standard `@oai/sky`.
+Independent provider and file checks corroborate the result. The separate
+fresh-helper native Chrome startup URL-confidence failure remains unresolved;
+the optional timing helper is not a universal fix.**
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -313,17 +312,58 @@ Actual embedded Stripe checkout showed TEST MODE. Separately labelled read-only
 provider and database checks found `livemode=false`, an open unpaid session,
 an amount of 5,000 USD cents and an agreement covering both recordings. Those
 checks corroborate checkout configuration; they are not a native payment pass.
-The final Pay action was prepared, and action-time sandbox-payment confirmation
-was requested in the affected chat. Payment, recovery, download, native
-playback/seek and receipt remain untested in this attempt.
+At that checkpoint the final Pay action was prepared, and action-time
+sandbox-payment confirmation was requested in the affected chat. Payment,
+recovery, download, native playback/seek and receipt had not yet been exercised.
 
 One native OS-picker `set_value` call returned an unavailable cached-element
 error for Chrome. Fresh native keyboard observations recovered file selection.
 Native focus metadata also differed from visible field focus; the trial
 compared live observations rather than treating that metadata as conclusive.
 Neither issue was a URL-confidence or physical Escape stop. No alternate
-browser controller was used. Checkpoint 67 records the verified stage artifacts
-and the remaining acceptance work; this trial does not resolve cold launch.
+browser controller was used. Checkpoint 67 records those intermediate stage
+artifacts. The completed continuation below supersedes the pending stages.
+
+### Complete native dev-product acceptance
+
+The orchestrator had explicitly told the affected chat to retain final payment
+confirmation. This applied a financial-transaction guideline too broadly to
+the already authorized no-real-money sandbox test. Checkpoint 68 records the
+correction. The original checkout expired during that hold and stayed unpaid.
+Native Change payment method recovered checkout for the same uploaded batch.
+The fresh actual provider session was checked before Pay: `livemode=false`,
+5,000 USD cents, open and unpaid.
+
+The affected chat's final `zmodo-native-e2e-8` is **PASS**, completed October 3
+at 15:11 UTC. Every GUI action used standard Windows Chrome Computer Use
+`@oai/sky`; the selected engine remained WSL. Native Pay completed the test
+payment, both recordings recovered, the thank-you page linked the batch, and
+Chrome downloaded both MP4s and both metadata JSONs. Both MP4s actually played,
+replayed and sought backward. Payment history and receipt showed the expected
+provider, amount and two filenames. Minimal metadata and 30-day retention were
+also verified. No real money was charged.
+
+Separately labelled read-only verification found the provider session complete
+and paid, one paid database payment and one canceled old checkout. Both child
+recoveries completed about 13 seconds after the payment timestamp. Each MP4
+was 448,708 bytes; actual downloaded hashes matched stored output hashes. The
+metadata download hashes also matched. These checks corroborate native actions
+without replacing payment, upload, download or playback with another controller.
+
+The run recorded 62 native events. Indexed Stripe Pay clicks twice resolved
+outside the window and were rejected before dispatch. A fresh screenshot-backed
+native coordinate click submitted the verified test payment. Earlier picker
+cache and focus discrepancies remained in the evidence. No URL-confidence
+denial, physical Escape stop, helper reset, alternate GUI controller or native
+policy modification occurred. Ordinary element/focus errors therefore remain
+distinct from the earlier native URL-confidence stop.
+
+Checkpoint 69 preserves hashes of the sanitized acceptance artifacts and the
+independently checked downloads. The prior Linux Playwright pass remains
+separate. This result validates the dev Stripe MP4 batch workflow with an
+existing Chrome window; cold Computer Use startup, PayPal and live production
+payments were not exercised. Fresh-helper native-launch reliability remains
+open.
 
 ## What the evidence currently establishes
 
@@ -718,8 +758,9 @@ The earlier October 2 timing-helper acceptance recorded four complete native
 public-page flows, including a normal launch and repeat with the startup flag
 absent. Those passes remain valid historical evidence. They do not override the
 subsequent product-flow failure, runtime update, or October 3 cold-start failures
-in both capture modes after the bridge was matched to CLI 0.160.0. Full native
-product acceptance remains outstanding. Confidence is **high** in the recorded
+in both capture modes after the bridge was matched to CLI 0.160.0. The later
+existing-window native product test passed the complete dev Stripe workflow.
+That does not resolve fresh-helper startup. Confidence is **high** in the recorded
 outcomes, **medium-low** in the revised timing candidate as a complete fix, and
 **low** in a specific internal cause. The supported API does not expose enough
 of URL extraction, window association or validation to distinguish them yet.
@@ -733,11 +774,12 @@ verified native typing and navigation to the actual dev preview gate. These
 new results narrow the initialization/launch comparison without proving a
 complete repair. The affected chat independently passed literal dev-URL typing
 and navigation on the existing normal Chrome window. Its later native product
-trial, with explicit test-account authentication authorization, passed sign-in,
-uploads, the saved quote and actual Stripe TEST MODE checkout. Final payment
-confirmation and the subsequent product stages remain pending. A shared-route
-comparison also remains untested and requires its separately documented
-prerequisites. Complete native product acceptance remains outstanding.
+trial, with explicit test-account authentication authorization, then passed
+the complete native product flow, including sandbox payment, recovery, GUI
+downloads, playback/seek and receipt. A shared-route comparison remains
+untested and requires its separately documented prerequisites. Full native
+dev Stripe acceptance is complete; fresh-helper native-launch reliability
+remains unresolved.
 The startup flag had **medium-low** confidence before testing. One immediate
 New Tab capture and navigation passed, but its fresh-turn repeat failed with
 the original URL-confidence stop while the real flag remained present.
@@ -754,7 +796,7 @@ native URL error.
 | Check Windows UI language and native Document output | Read-only culture metadata and a supported native state observation on a loaded public page | If labels are English, deprioritize the language-only theory; do not change system language speculatively | Medium |
 | Distinguish action failure from immediate-refresh failure | Record which supported API call returned or failed, while retaining the original error | A native stop ends input for that turn; no blind action retry | High diagnostic value |
 | Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
-| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 2 loaded-page and timing repeats passed; later native product attempt failed. October 3 cold native launch still stopped, while the latest affected-chat normal existing-window trial reached the actual dev preview gate. Complete product acceptance remains open | High for the recorded outcomes; current reliability unverified |
+| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 2 loaded-page and timing repeats passed; a later native attempt failed. October 3 cold native launch still stopped, while the subsequent affected-chat existing-window run passed the entire dev Stripe product flow. Cold startup remains unresolved | High for recorded outcomes; universal reliability unverified |
 | Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Guarded Sky 0.7.5 facade helper retains native checks. Earlier passes did not generalize to the updated runtime's cold initial capture | Medium-low for the revised candidate as a complete fix |
 | Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
 | Pre-enable complete Chrome accessibility | Authorized launcher apply, verified real flag, native initial capture, immediate Ctrl+T capture, typing, committed navigation, then a fresh-turn repeat after human resumption | Completed: first capture/navigation stages passed, click interrupted; fresh-turn repeat stopped immediately after Ctrl+T. Keep the launcher as a diagnostic, not a verified fix | Medium-low before test; high that this was insufficient in the tested configuration |

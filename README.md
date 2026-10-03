@@ -19,29 +19,21 @@ the distinct failures, attempted repairs, live results, community sources, and
 remaining verification work. The startup adapter and the Chrome timing patch
 address different stages; install only the components matching your symptoms.
 
-**Current limitation:** earlier native Chrome acceptance passed, but a later
-dev product test switched to Playwright after native observations stopped
-updating. The complete product flow through native Computer Use is still under
-investigation. The timing patch is a candidate workaround, not a universal fix.
-On October 3, a fresh normal Chrome launch still stopped at its first native
-text capture after the bridge CLI was matched to the current app. Window
-selection and activation succeeded. That capture began about 42 seconds after
-launch, so a longer startup wait alone is not an established repair.
-Later controls passed cold capture through both the diagnostic and native
-launchers while reusing a helper after successful browser observations. A fresh
-helper with native Chrome launch reproduced the stop. Fresh-helper trials with
-the same external diagnostic launcher then returned Chrome screenshots with
-and without the accessibility flag; both initially returned no accessibility
-text. The flagged trial subsequently verified address focus, literal dev-URL
-typing and navigation to the preview gate. These observations do not establish
-that a startup flag or a different launcher fixes fresh-session reliability.
-The affected chat then independently verified typing and navigation with normal
-Chrome. With explicit test-account authentication authorization, its latest
-native product trial passed sign-in, two-file selection, first-frame checks,
-full uploads, a saved quote and confirmed Stripe TEST MODE checkout. Final
-sandbox-payment confirmation is pending; recovery, download, native playback
-and receipt remain untested in that trial. Cold native-launch reliability is
-still unresolved.
+**Verified on October 3:** the affected WSL-backed chat completed a native Chrome
+product test using standard `@oai/sky`: test-account sign-in, two-file selection,
+first-frame checks, uploads, quote and terms, actual Stripe sandbox payment,
+recovery, four GUI downloads, playback and seeking of both MP4s, and receipt.
+Independent provider checks confirmed `livemode=false` and a completed paid
+test session; downloaded hashes matched the stored outputs. No alternate GUI
+controller or native URL-confidence override was used.
+
+**Remaining limitation:** that pass used an existing Chrome window. A fresh
+helper with native Chrome launch previously stopped at its first capture with
+the URL-confidence error. A capture about 42 seconds after launch also failed,
+so a longer startup wait alone is not an established repair. Reused-helper
+controls and external-launcher trials passed some initial captures without
+establishing a universal startup fix. The optional timing patch remains a
+candidate workaround; cold native-launch reliability is still unresolved.
 
 ## 1. WSL project paths
 
@@ -229,6 +221,7 @@ input. All browser tests used the native `@oai/sky` API with the WSL agent.
 | Immediate state read after Chrome tab creation | Ctrl+T and Alt+Enter returned, but immediate native capture stopped at URL verification; foreground activation alone was insufficient |
 | Forced complete Chrome accessibility | Initial New Tab capture/navigation passed, click was interrupted by physical Escape; fresh-turn repeat failed. This launcher is not a verified fix |
 | Installed Chrome timing helper, October 2 | Four complete affected-chat tests passed, including normal native launch and its repeat without the experimental flag; see below |
+| Native product acceptance, October 3 | Complete dev Stripe MP4 batch flow passed in the affected WSL chat: authentication, uploads, sandbox payment, recovery, GUI downloads, playback/seek and receipt. Existing Chrome window; cold startup was not tested |
 
 The [investigation ledger](./docs/computer-use-investigation.md) records each
 failure, attempted solution, primary community source, and verified result.
