@@ -28,11 +28,16 @@ text capture after the bridge CLI was matched to the current app. Window
 selection and activation succeeded. That capture began about 42 seconds after
 launch, so a longer startup wait alone is not an established repair.
 Later controls passed cold capture through both the diagnostic and native
-launchers, with the accessibility flag absent, while reusing a helper session
-after successful browser observations. Resetting only the JavaScript/helper
-session reproduced the first-capture stop, even with activation and capture in
-one call. Fresh-helper reliability remains unresolved; the passing controls do
-not establish that the startup flag or a different launcher fixes it.
+launchers while reusing a helper after successful browser observations. A fresh
+helper with native Chrome launch reproduced the stop. Fresh-helper trials with
+the same external diagnostic launcher then returned Chrome screenshots with
+and without the accessibility flag; both initially returned no accessibility
+text. The flagged trial subsequently verified address focus, literal dev-URL
+typing and navigation to the preview gate. These observations do not establish
+that a startup flag or a different launcher fixes fresh-session reliability.
+The affected chat then independently verified typing and navigation with normal
+Chrome and stopped at the same authentication gate. Its native product flow
+remains untested; cold native-launch reliability is still unresolved.
 
 ## 1. WSL project paths
 

@@ -4,7 +4,9 @@ Updated: 2026-10-03. Status: **investigation resumed. The two-second timing
 helper passed the earlier native acceptance tests, but a later product test
 switched to Playwright after native Chrome stopped updating. A subsequent
 native dev-site navigation reproduced the URL-confidence stop during capture.
-The complete product flow through native Computer Use remains unverified.**
+The latest root and affected-chat native trials reached the dev preview gate;
+authentication is awaiting human handling. Cold native-launch reliability and
+the complete product flow through native Computer Use remain unverified.**
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -172,8 +174,10 @@ helper. The imported capture hook was verified active. Normal native Chrome
 launch returned a new window; activation returned, but its first screenshot
 plus text capture hit the URL-confidence stop. Activation and capture were
 still in the same call. No browser input was issued to the fresh window and
-no native app call followed the stop. The helper parent PID changed from 39372
-to 7992. WSL, current CLI 0.160.0, Sky 0.7.5, the settling hook and browser flags
+no native app call followed the stop. Chrome's parent, the native helper,
+changed from PID 39372 to PID 7992. A subsequent metadata query identified
+PID 7992 as `codex-computer-use.exe`; its own parent was PID 47512. WSL,
+current CLI 0.160.0, Sky 0.7.5, the settling hook and browser flags
 were unchanged.
 
 This makes helper initialization or retained state a stronger hypothesis.
@@ -182,16 +186,93 @@ value; the internal cause remains unproven. The exposed JavaScript metadata
 did not supply a sandbox profile in the read-only follow-up, which is not
 evidence that the tool's actual permissions were missing or changed.
 
-Next fresh-turn comparisons are complete-accessibility startup with a clean
-helper, and a supported non-browser state capture before normal cold Chrome.
-The latter can distinguish general accessibility initialization from retained
-browser state without providing any browser URL or weakening its check. These
-are unexecuted hypotheses with medium diagnostic confidence and low confidence
-as complete repairs. A native stop ends GUI work for its turn.
+The next fresh turn compared complete-accessibility startup with a clean
+helper and a matching default-mode control, recorded below. A supported
+non-browser state capture before normal cold Chrome remains an unexecuted
+hypothesis with medium diagnostic confidence and low confidence as a complete
+repair. It could distinguish general accessibility initialization from retained
+browser state without providing a browser URL or weakening its check.
+A native stop ends GUI work for its turn.
 
 The affected chat separately refreshed its own idle adapter and verified the
 actual Windows child now uses CLI 0.160.0, Sky 0.7.5 and pipe flag 0. It made no
 desktop actions. Independent native product acceptance has not started.
+
+### Clean-helper external-launch comparison
+
+Checkpoints 56–57 verified zero Chrome processes before each trial, reset the
+root JavaScript kernel, initialized the bundled Sky client and used the same
+diagnostic launcher. Windows metadata independently confirmed different fresh
+native helper processes. The Chrome version, WSL engine, current child CLI,
+per-runtime route and timing hook remained matched; the startup flag differed.
+Both trials activated and captured in the same call, with no caller sleep.
+Startup intervals were observed rather than precisely matched.
+
+With complete accessibility, the first screenshot/text request returned
+matching Chrome pixels but `accessibility: null`. It did not emit a native
+URL-confidence stop. A normal native Ctrl+L followed by immediate capture
+returned the address-bar focus and accessibility tree. Literal typing of the
+actual Zmodo dev URL was visible in pixels and the address field. A separate
+Return plus capture reached the expected preview-password gate; screenshot,
+title, address and document URL agreed. Authentication was not attempted.
+This proves navigation through that gate in this trial, not the upload,
+checkout or recovery flow.
+
+The same launcher without the accessibility flag also returned matching
+Chrome screenshots from a fresh helper. Its first capture likewise had no
+accessibility text. Thus the flag is not required for these observed initial
+results. Both trials started Chrome outside the native helper, unlike the
+fresh native-launch failure in checkpoint 54. Launch path, timing and native
+or browser initialization remain hypotheses; none is a proved cause.
+
+The affected chat's independent offline lifecycle review found cached facade
+and service clients, reference-counted transports and a reused native helper.
+Each capture still sends a native request. The visible JavaScript contains no
+browser URL extractor or UI Automation initialization routine, and no
+kernel-reset cleanup guarantee. Actual helper PID changes provide stronger
+reset evidence than recreated JavaScript bindings. These findings do not
+identify a native URL cache or a particular internal failure.
+
+The normal externally launched window was handed to the affected chat for a
+fresh native navigation regression test, recorded below. Native product
+acceptance remains outstanding. Confidence is high in the recorded
+observations, medium in their diagnostic value and low in a complete repair.
+
+### Affected-chat native navigation acceptance
+
+The affected chat completed `zmodo-native-navigation-4` using its matched
+Windows CLI 0.160.0, Sky 0.7.5 and per-runtime route. It reset only its own
+JavaScript kernel before initialization, selected the one returned normal
+Chrome window and used native Sky for every browser action. Chrome's process
+identity remained unchanged; no accessibility or remote-debugging flag was
+present. The root had already captured this window, so this is independent
+chat acceptance on an existing browser, not an untouched cold-browser test.
+
+Its initial screenshot/text capture again returned matching Chrome pixels
+with null accessibility. Ctrl+L plus immediate capture reported real address
+focus. One literal dev-URL typing action matched both the native address
+field and visible pixels. A separate Return plus capture reached the preview
+gate with matching document URL, title and address value. Captures took
+5,342 ms initially, 2,237 ms after focus, 2,237 ms after typing and 6,526 ms
+after Return. No caller wait, native error or physical Escape stop occurred.
+The prior unchanged-input symptom did not recur in this trial. Multiple
+runtime and startup variables have changed since the earlier failure;
+this does not identify which change resolved that observation.
+
+The chat stopped at authentication and persisted sanitized process metadata,
+timestamps and field outcomes. Human preview access and test-account login
+were requested. No authentication, upload, checkout, recovery or download was
+automated in this acceptance. The separate Playwright product pass continues
+to be recorded independently.
+
+Process snapshots during the handoff showed the root's native helpers absent
+while its parent Node process remained alive; the root JavaScript bindings
+also survived the other chat's kernel reset. The affected chat's own helpers
+were present. Neither snapshot establishes when or why the earlier helpers
+exited, or proves a cross-chat termination bug. The visible transport has
+close, pending-request timeout, parent-exit and physical Escape cleanup paths;
+the native implementation's lifetime remains unverified. Checkpoint 58
+preserves this observation without claiming a cause.
 
 ## What the evidence currently establishes
 
@@ -459,6 +540,8 @@ untested proposals. Private logs and configuration are not published here.
 | Does wrapping the Windows backend module affect the live client? | Version-guarded reversible deployment, then immediate native capture without a manual wait | Capture remained 129 ms and stopped at URL confidence; no further Computer Use that turn | First deployment did not affect the live RPC path; original backend restored; checkpoint 36 |
 | Can ordinary Sky calls use the settling candidate automatically? | Hook the imported Windows-target facade, reset the idle JavaScript kernel once before app calls, verify active wrapper, perform the full native flow without a manual timer; repeat without resetting | Both complete flows passed, including immediate valid New Tab; captures 2,162 ms and 2,135 ms; no manual waits or native errors | Two consecutive deployed passes verified; standalone normal-launch test also passed later; checkpoints 37-39 |
 | Does the timing helper depend on the complete-accessibility flag? | Authorized identity-checked Chrome termination, documented native launch without flags, real-process flag checks before/after testing, complete flow and fresh-turn repeat | Normal launch and both complete query17/query18 and query19/query20 flows passed; immediate New Tab captures 2,182 ms and 2,184 ms | Two consecutive standalone passes verified; checkpoints 39-40 |
+| Does complete accessibility fix a clean helper? | Zero Chrome processes, fresh helper identity, same external launcher with and without the flag, same-call activation/capture | Both first captures returned matching screenshots with null accessibility. The flagged trial subsequently verified literal dev typing and navigation | Flag not required for these observed initial results; native launch and full product reliability unresolved; checkpoints 56-57 |
+| Does the affected chat still return unchanged state after typing? | Matched actual child CLI, fresh own helper, normal existing Chrome, one focus/type/Return action with immediate capture at each step | Exact typed dev URL and committed preview destination verified in pixels and accessibility, with no native stop | Navigation-only PASS in the affected chat; original cause and native product acceptance remain open; checkpoint 58 |
 
 ## Proposals not adopted as fixes
 
@@ -490,6 +573,7 @@ latest checked update, not a promise that the workaround works on this machine.
 | [WinBridge Recovery](https://github.com/zemeng5208/winbridge-recovery) — main commit August 23; v4 release implementation reviewed October 3 | Checks and repairs plugin/cache/runtime/registration drift; the current release code is on the v4 tag, rather than the earlier main tree | Useful consistency checks; the reviewed repair entrypoints do not establish a native URL-resolution fix. Its Windows MCP configuration must not overwrite our WSL adapter |
 | [Windows Fast Patch context script](https://github.com/chen0416ccc-cpu/codex-windows-fast-patch-skill/blob/main/scripts/patch-computer-use-node-repl-context.ps1) — repository updated September 30 | A hash/version-specific SDK request-context patch for Sky 0.6.2 | Compare the actual installed SDK before considering it; its documented symptom differs from our final native stop |
 | [Cross-call context report](https://gist.github.com/MSWEIMZ/0b8368f34a20c7ab6a89d53afebde14c) — August 7 | Reports `node_repl exec context not found` and same-call recovery in native Windows | Distinct error family; do not adopt an action batch that skips the current skill's observation requirements |
+| [Session-scoped browser policy initialization #45366](https://github.com/openai/codex/issues/45366) — September 14 | The author supplies browser-service source excerpts and reports a cached Statsig initialization failure with `Unable to load browser request-header policy` | A concrete cache hypothesis for that separate error and in-app browser path. Our current native tests have not emitted it. The author's excerpts were read; no current browser-service patch was installed or validated here |
 | [Rotated native-pipe repair #41453](https://github.com/openai/codex/issues/41453) — updated September 5 | Author describes refreshing an obsolete product-generated pipe identifier once after `FILE_NOT_FOUND` | Relevant to shared-connection lifecycle; our current per-runtime route is different and our final error is not missing-pipe |
 | [Current Chrome/Edge reproduction #46943](https://github.com/openai/codex/issues/46943#issuecomment-5869800007) — September 28 | Native URL verification still fails after extension diagnostics pass; a separate non-browser capture timeout is also reported | Browser integration health does not prove native URL verification; do not assume the capture timeout explains our successful captures |
 | [Current Edge reproduction #31221](https://github.com/openai/codex/issues/31221#issuecomment-5872343234) — September 28 | Sky 0.7.4 still fails after removing an obsolete CLI override, despite independently readable URL sources | Correct CLI selection is necessary but not sufficient; this newer generation has no verified native recovery in the report |
@@ -498,6 +582,7 @@ latest checked update, not a promise that the workaround works on this machine.
 | [Recent Chrome report #40474](https://github.com/openai/codex/issues/40474#issuecomment-5927363911) — October 1 | Native Chrome state fails on bundle 26.928.31416, including in a fresh chat, while Browser Use succeeds | A problem confined to one chat cannot explain every reproduction; our affected chat now passes loaded-page tests, so New Tab state is the remaining local comparison |
 | [Isolated Windows runtime home #27463](https://github.com/openai/codex/issues/27463) — June 10 | Author reports desktop-app control after separating Windows helper files from the shared WSL home | Its acceptance examples do not establish Chrome navigation; our current shared helper directory is empty and shell execution works, so no matching failure was demonstrated and no home change was applied |
 | [Chrome New Tab state report #46200](https://github.com/openai/codex/issues/46200) — September 17 | Native Chrome enumeration succeeds but a read-only New Tab state request terminates with the URL-confidence error | Closely matches our failing API and page class; no compatible repair is established by the report; its locale and versions differ |
+| [Screenshot/accessibility disagreement #34016](https://github.com/openai/codex/issues/34016) — July 18 | An older Windows runtime returned lock-screen pixels paired with a target app identity and sometimes its accessibility state | Supports checking pixels against the selected window. Our current captures showed Chrome, so this report does not establish a locked-desktop cause for the current failure |
 | [Overlapping address-field report #34715](https://github.com/openai/codex/issues/34715) — July 22 | An Opera reporter finds an empty outer address element overlapping an inner element with a valid URL and proposes examining all candidates | A specific extraction hypothesis, not a demonstrated cause for our Chrome New Tab failure; no matching local observation or portable patch was established |
 | [Chromium accessibility overview](https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/accessibility/overview.md) | Accessibility normally enables on demand; an explicit `--force-renderer-accessibility=complete` keeps the full mode enabled | Supports a controlled initialization experiment; does not establish that it fixes Codex's URL resolver |
 | [Chrome keyboard shortcuts](https://support.google.com/chrome/answer/157179) | Documents address-bar `Alt+Enter` for opening a new tab | Provided a normal native-input comparison; our immediate refresh still failed after that action |
@@ -590,10 +675,16 @@ of URL extraction, window association or validation to distinguish them yet.
 
 The complete-accessibility/current-settler combination passed a public flow in
 an existing helper session. Default-mode cold controls also passed there, but
-a fresh helper reproduced the stop with the same-call capture sequence.
-Clean-helper initialization is the next comparison; a shared-route comparison
-also remains untested and requires its separately documented prerequisites.
-Neither establishes native product acceptance.
+a fresh helper with native launch reproduced the stop. Later fresh helpers
+using the same external launcher returned initial screenshots with and without
+the flag; both initially had null accessibility. The flagged trial subsequently
+verified native typing and navigation to the actual dev preview gate. These
+new results narrow the initialization/launch comparison without proving a
+complete repair. The affected chat independently passed literal dev-URL typing
+and navigation on the existing normal Chrome window, then stopped for human
+authentication. A shared-route comparison also remains untested and requires
+its separately documented prerequisites. Native product acceptance remains
+outstanding.
 The startup flag had **medium-low** confidence before testing. One immediate
 New Tab capture and navigation passed, but its fresh-turn repeat failed with
 the original URL-confidence stop while the real flag remained present.
@@ -610,7 +701,7 @@ native URL error.
 | Check Windows UI language and native Document output | Read-only culture metadata and a supported native state observation on a loaded public page | If labels are English, deprioritize the language-only theory; do not change system language speculatively | Medium |
 | Distinguish action failure from immediate-refresh failure | Record which supported API call returned or failed, while retaining the original error | A native stop ends input for that turn; no blind action retry | High diagnostic value |
 | Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
-| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 2 loaded-page and timing repeats passed; later native product attempt failed and October 3 cold capture still stops. Current complete acceptance remains open | High for the recorded outcomes; current reliability unverified |
+| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 2 loaded-page and timing repeats passed; later native product attempt failed. October 3 cold native launch still stopped, while the latest affected-chat normal existing-window trial reached the actual dev preview gate. Complete product acceptance remains open | High for the recorded outcomes; current reliability unverified |
 | Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Guarded Sky 0.7.5 facade helper retains native checks. Earlier passes did not generalize to the updated runtime's cold initial capture | Medium-low for the revised candidate as a complete fix |
 | Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
 | Pre-enable complete Chrome accessibility | Authorized launcher apply, verified real flag, native initial capture, immediate Ctrl+T capture, typing, committed navigation, then a fresh-turn repeat after human resumption | Completed: first capture/navigation stages passed, click interrupted; fresh-turn repeat stopped immediately after Ctrl+T. Keep the launcher as a diagnostic, not a verified fix | Medium-low before test; high that this was insufficient in the tested configuration |
