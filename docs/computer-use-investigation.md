@@ -4,9 +4,10 @@ Updated: 2026-10-03. Status: **investigation resumed. The two-second timing
 helper passed the earlier native acceptance tests, but a later product test
 switched to Playwright after native Chrome stopped updating. A subsequent
 native dev-site navigation reproduced the URL-confidence stop during capture.
-The latest root and affected-chat native trials reached the dev preview gate;
-authentication is awaiting human handling. Cold native-launch reliability and
-the complete product flow through native Computer Use remain unverified.**
+The affected chat's latest native product trial passed authorized test-account
+sign-in, two-file uploads, a saved quote and verified Stripe TEST MODE checkout.
+Final sandbox-payment confirmation is pending. Cold native-launch reliability
+and the complete native product flow remain unverified.**
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -296,7 +297,33 @@ stop controls. Polling can miss a process that starts and exits between samples;
 an exit code alone also cannot identify which component requested termination.
 Checkpoint 61 records its verification and scope. The next capture experiment
 can retain handles before the action, rather than infer an exit from a missing
-PID afterward. Native product acceptance and human authentication remain open.
+PID afterward. At that checkpoint, native product acceptance and human
+authentication remained open.
+
+### Native product flow through test checkout
+
+The affected chat's `zmodo-native-e2e-6` resumed with direct human authorization
+to handle the existing test-account authentication. It used standard native
+`@oai/sky` on Windows Chrome with WSL retained throughout. Preview access,
+account sign-in, two-file selection, both first-frame thumbnails, full uploads,
+the saved quote, purchase terms and checkout acknowledgment controls passed.
+The two recordings totalled 919,720 bytes and the quote was $50 USD.
+
+Actual embedded Stripe checkout showed TEST MODE. Separately labelled read-only
+provider and database checks found `livemode=false`, an open unpaid session,
+an amount of 5,000 USD cents and an agreement covering both recordings. Those
+checks corroborate checkout configuration; they are not a native payment pass.
+The final Pay action was prepared, and action-time sandbox-payment confirmation
+was requested in the affected chat. Payment, recovery, download, native
+playback/seek and receipt remain untested in this attempt.
+
+One native OS-picker `set_value` call returned an unavailable cached-element
+error for Chrome. Fresh native keyboard observations recovered file selection.
+Native focus metadata also differed from visible field focus; the trial
+compared live observations rather than treating that metadata as conclusive.
+Neither issue was a URL-confidence or physical Escape stop. No alternate
+browser controller was used. Checkpoint 67 records the verified stage artifacts
+and the remaining acceptance work; this trial does not resolve cold launch.
 
 ## What the evidence currently establishes
 
@@ -705,10 +732,12 @@ the flag; both initially had null accessibility. The flagged trial subsequently
 verified native typing and navigation to the actual dev preview gate. These
 new results narrow the initialization/launch comparison without proving a
 complete repair. The affected chat independently passed literal dev-URL typing
-and navigation on the existing normal Chrome window, then stopped for human
-authentication. A shared-route comparison also remains untested and requires
-its separately documented prerequisites. Native product acceptance remains
-outstanding.
+and navigation on the existing normal Chrome window. Its later native product
+trial, with explicit test-account authentication authorization, passed sign-in,
+uploads, the saved quote and actual Stripe TEST MODE checkout. Final payment
+confirmation and the subsequent product stages remain pending. A shared-route
+comparison also remains untested and requires its separately documented
+prerequisites. Complete native product acceptance remains outstanding.
 The startup flag had **medium-low** confidence before testing. One immediate
 New Tab capture and navigation passed, but its fresh-turn repeat failed with
 the original URL-confidence stop while the real flag remained present.

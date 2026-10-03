@@ -36,8 +36,12 @@ text. The flagged trial subsequently verified address focus, literal dev-URL
 typing and navigation to the preview gate. These observations do not establish
 that a startup flag or a different launcher fixes fresh-session reliability.
 The affected chat then independently verified typing and navigation with normal
-Chrome and stopped at the same authentication gate. Its native product flow
-remains untested; cold native-launch reliability is still unresolved.
+Chrome. With explicit test-account authentication authorization, its latest
+native product trial passed sign-in, two-file selection, first-frame checks,
+full uploads, a saved quote and confirmed Stripe TEST MODE checkout. Final
+sandbox-payment confirmation is pending; recovery, download, native playback
+and receipt remain untested in that trial. Cold native-launch reliability is
+still unresolved.
 
 ## 1. WSL project paths
 
