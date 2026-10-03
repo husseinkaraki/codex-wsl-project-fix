@@ -274,6 +274,30 @@ close, pending-request timeout, parent-exit and physical Escape cleanup paths;
 the native implementation's lifetime remains unverified. Checkpoint 58
 preserves this observation without claiming a cause.
 
+### Read-only helper coexistence and exit recording
+
+The root next used its retained Sky facade for `list_apps` and `get_window`
+only. Inventory started a new root helper while the affected chat's existing
+broker and secondary helper stayed alive. Window binding also left those
+processes alive. This rules out universal cross-chat termination during these
+read-only stages; activation, capture and simultaneous input were not tested.
+Checkpoint 60 preserves the returned window identity and process snapshots.
+
+A private, bounded metadata recorder was then verified using a retained .NET
+process handle. An owned hidden PowerShell child exited with the chosen code
+37; an independently attached handle recovered that code after the owning
+handle was closed. A separate two-second sample attached to both chats' Node
+parents and all three existing native helpers without access errors. All five
+processes remained alive; no actual helper exit was observed in that sample.
+
+The recorder reads process identity and exit metadata only. It performs no
+app activation, capture or input, and does not change the native connection or
+stop controls. Polling can miss a process that starts and exits between samples;
+an exit code alone also cannot identify which component requested termination.
+Checkpoint 61 records its verification and scope. The next capture experiment
+can retain handles before the action, rather than infer an exit from a missing
+PID afterward. Native product acceptance and human authentication remain open.
+
 ## What the evidence currently establishes
 
 The investigation has encountered several independent failures. Repairing an
