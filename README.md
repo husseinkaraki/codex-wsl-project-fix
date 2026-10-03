@@ -27,13 +27,19 @@ Independent provider checks confirmed `livemode=false` and a completed paid
 test session; downloaded hashes matched the stored outputs. No alternate GUI
 controller or native URL-confidence override was used.
 
-**Remaining limitation:** that pass used an existing Chrome window. A fresh
-helper with native Chrome launch previously stopped at its first capture with
-the URL-confidence error. A capture about 42 seconds after launch also failed,
-so a longer startup wait alone is not an established repair. Reused-helper
-controls and external-launcher trials passed some initial captures without
-establishing a universal startup fix. The optional timing patch remains a
-candidate workaround; cold native-launch reliability is still unresolved.
+**Startup follow-up on October 3:** the affected chat independently passed two
+fresh-helper, native cold Chrome tests, including typing, committed navigation
+and a mouse click. One kept launch and first capture in one JavaScript call;
+the other separated launch, binding and capture. Several troubleshooting-chat
+controls also passed without a preliminary non-browser capture or startup wait.
+
+**Remaining limitation:** a subsequent fresh-helper trial again stopped at its
+first native capture with the URL-confidence error, before any browser input.
+Its measured binding-to-capture interval was 196.816 seconds, rather than the
+intended 13.474-second historical comparison. That timing mismatch is recorded;
+elapsed time is not a proven cause. Successful product and startup tests remain
+valid, but cold native-launch reliability is still unresolved. The optional
+timing patch remains a candidate workaround, not a complete repair.
 
 ## 1. WSL project paths
 

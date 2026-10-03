@@ -4,9 +4,10 @@ Updated: 2026-10-03. Status: **complete native dev-product acceptance passed in
 the affected WSL-backed chat using existing Windows Chrome. Authentication,
 uploads, actual Stripe sandbox payment, recovery, GUI downloads, native
 playback/seek and receipt were exercised through standard `@oai/sky`.
-Independent provider and file checks corroborate the result. The separate
-fresh-helper native Chrome startup URL-confidence failure remains unresolved;
-the optional timing helper is not a universal fix.**
+Independent provider and file checks corroborate the result. Two independent
+fresh-helper native Chrome startup flows also passed, but a later delayed first
+capture reproduced the URL-confidence stop before input. Cold-start reliability
+remains unresolved; the optional timing helper is not a universal fix.**
 
 The goal is to operate Windows Chrome through Codex's bundled native Computer
 Use API from an existing WSL-backed chat. The agent and repositories stay in
@@ -48,9 +49,10 @@ not a page-readiness guarantee. Installer upgrades accept only the exact known
 previous shim hash; unknown edits and vendor builds are still refused.
 
 Confidence is **medium-low** in this candidate's applicability to the observed
-redirect failure. Cold-launch and affected-chat native product acceptance are
-still required. Checkpoints 44 and 45 preserve the runtime drift and distinguish
-the capture failure from the preceding successful navigation.
+redirect failure. At this phase cold-launch and affected-chat native product
+acceptance were still required; later results are recorded below. Checkpoints
+44 and 45 preserve the runtime drift and distinguish the capture failure from
+the preceding successful navigation.
 
 ### Matched bridge and isolated cold-start failure
 
@@ -188,10 +190,10 @@ evidence that the tool's actual permissions were missing or changed.
 
 The next fresh turn compared complete-accessibility startup with a clean
 helper and a matching default-mode control, recorded below. A supported
-non-browser state capture before normal cold Chrome remains an unexecuted
+non-browser state capture before normal cold Chrome was then an unexecuted
 hypothesis with medium diagnostic confidence and low confidence as a complete
-repair. It could distinguish general accessibility initialization from retained
-browser state without providing a browser URL or weakening its check.
+repair. Checkpoint 70 later tested it, and checkpoints 71–73 passed controls
+without it; these results do not establish non-browser capture as a repair.
 A native stop ends GUI work for its turn.
 
 The affected chat separately refreshed its own idle adapter and verified the
@@ -364,6 +366,47 @@ separate. This result validates the dev Stripe MP4 batch workflow with an
 existing Chrome window; cold Computer Use startup, PayPal and live production
 payments were not exercised. Fresh-helper native-launch reliability remains
 open.
+
+### Fresh-helper startup controls and a later native stop
+
+The same installed configuration was retained throughout checkpoints 70–75:
+WSL agent, Desktop 26.930.3748.0, plugin 26.930.31428, Sky 0.7.5, matched CLI
+0.160.0, Chrome 154.0.8037.97 and the existing guarded timing hook. No runtime
+patch, complete-accessibility flag or URL-policy change was introduced for
+these trials. Fresh kernels were initialized before tests, never to bypass a
+native stop.
+
+| Trial | Changed variable or sequence | Observed result |
+| --- | --- | --- |
+| Checkpoint 70 | Capture Calculator before native cold Chrome | First launch restored an HTTPS page and passed capture, so it was a confounded control. After preparing a single New Tab and fully exiting Chrome, a fresh-helper repeat passed first capture and the full public typing/navigation/link-click flow. |
+| Checkpoint 71 | Remove the Calculator capture and match the prior 56.410-second helper-age delay; Calculator remains in the background | First New Tab capture passed. A preliminary non-browser capture was not required for this observed pass. |
+| Checkpoint 72 | Remove the deliberate startup delay; Calculator remains in the background | Native launch began 279 ms after initialization and first New Tab capture passed. Only initial capture was tested. |
+| Checkpoint 73 | Exit both Chrome and Calculator; fresh helper, no other-app capture or deliberate startup wait | Native launch began 271 ms after initialization. First New Tab capture, literal typing, committed Example Domain navigation and the native IANA link click passed. |
+| Independent affected-chat case A | Zero Chrome/Calculator processes and fresh helper; launch, selection, binding, activation and first capture in one JavaScript call | First New Tab capture and the full public typing/navigation/link-click flow passed. Binding-to-capture interval was 86 ms. |
+| Independent affected-chat case B | Same clean preconditions; launch, binding and activation/capture in separate JavaScript calls | First New Tab capture and the same full public flow passed. Binding-to-capture interval was 23,365 ms. |
+| Checkpoint 75 | Separate native calls intended to match the earlier checkpoint-54 launch/binding/capture timing | Binding followed launch return by 16,166 ms. First capture actually began 196,816 ms after binding and returned the original native URL-confidence stop before any browser input. The intended 13,474 ms binding-to-capture interval was not achieved. |
+
+The affected chat recorded its independent A/B result as
+`zmodo-native-startup-regression-2`, **PASS**, at 16:52 UTC on October 3. Both
+cases used standard native `@oai/sky`, began on New Tab, and ended with a native
+Chrome exit and independently verified zero Chrome/Calculator processes. No
+native error, URL-confidence stop, Escape cancellation, startup sleep or
+preliminary non-browser capture occurred in those cases. Checkpoint 76 hashes
+their sanitized reports and retains the later troubleshooting-chat failure.
+
+Checkpoint 75's original error was preserved. No native GUI call or reset
+followed it. Its unexpectedly long call interval makes it a delayed-capture
+failure, not a matched reproduction of the historical timing. The timestamps
+do not establish why the interval grew or whether elapsed time caused the
+native denial. Longer startup waits, non-browser warm-up and grouping calls
+cannot be claimed as universal repairs from these results.
+
+Confidence is **high** in the recorded complete product and independent startup
+passes, and **high** that a native first-capture failure still occurred in this
+configuration. Confidence is **low** in a complete cold-start repair or a
+specific internal cause. The goal remains incomplete. A subsequent authorized
+fresh-turn diagnostic should measure actual timing within a bounded sequence
+and compare window-binding freshness, without bypassing native URL checks.
 
 ## What the evidence currently establishes
 
@@ -796,7 +839,8 @@ native URL error.
 | Check Windows UI language and native Document output | Read-only culture metadata and a supported native state observation on a loaded public page | If labels are English, deprioritize the language-only theory; do not change system language speculatively | Medium |
 | Distinguish action failure from immediate-refresh failure | Record which supported API call returned or failed, while retaining the original error | A native stop ends input for that turn; no blind action retry | High diagnostic value |
 | Compare a stable loaded page with a new-tab transition | Fresh native state, matching screenshot/text, explicit activation, one allowed action and refresh | Completed: loaded-page flows passed; explicitly activated New Tab state refresh failed; internal failing stage remains unknown | Medium before test; high for the observed difference |
-| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 2 loaded-page and timing repeats passed; a later native attempt failed. October 3 cold native launch still stopped, while the subsequent affected-chat existing-window run passed the entire dev Stripe product flow. Cold startup remains unresolved | High for recorded outcomes; universal reliability unverified |
+| Recheck the affected chat in another fresh turn | Actual MCP profile, selected returned window, screenshot/focus, native typing, committed URL, clicked destination | October 3 complete native dev Stripe acceptance and two independent fresh-helper cold startup flows passed. A later troubleshooting-chat delayed first capture still stopped before input. Cold startup remains unresolved | High for recorded outcomes; universal reliability unverified |
+| Compare non-browser capture, helper age and initial call grouping | Clean browser state, fresh helper, measured phase timings and one initial native capture; full public input only after a passing state | Checkpoints 70–73 and independent affected-chat A/B passed without requiring a non-browser capture, long helper-age delay or one-call grouping. Checkpoint 75 stopped after an actual 196.816-second binding-to-capture gap; the historical 13.474-second target was missed | High for recorded outcomes; low for a complete repair or a timing-only cause |
 | Find a compatible New Tab repair | Primary source implementation or supported diagnostic that matches the current Sky/native build and retains URL verification | Guarded Sky 0.7.5 facade helper retains native checks. Earlier passes did not generalize to the updated runtime's cold initial capture | Medium-low for the revised candidate as a complete fix |
 | Compare direct-URL and blank-tab creation | Native input from a verified public baseline, one tab-creation action, immediate state read | Completed: `Alt+Enter` also stopped at refresh; new-tab creation/navigation unverified after stop | Medium before test; high for the observed failing phase |
 | Pre-enable complete Chrome accessibility | Authorized launcher apply, verified real flag, native initial capture, immediate Ctrl+T capture, typing, committed navigation, then a fresh-turn repeat after human resumption | Completed: first capture/navigation stages passed, click interrupted; fresh-turn repeat stopped immediately after Ctrl+T. Keep the launcher as a diagnostic, not a verified fix | Medium-low before test; high that this was insufficient in the tested configuration |
