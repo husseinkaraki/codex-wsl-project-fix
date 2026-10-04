@@ -37,9 +37,11 @@ controls also passed without a preliminary non-browser capture or startup wait.
 first native capture with the URL-confidence error, before any browser input.
 Its measured binding-to-capture interval was 196.816 seconds, rather than the
 intended 13.474-second historical comparison. That timing mismatch is recorded;
-elapsed time is not a proven cause. Successful product and startup tests remain
-valid, but cold native-launch reliability is still unresolved. The optional
-timing patch remains a candidate workaround, not a complete repair.
+checkpoint 77 traced the long gap to a conversation-compaction pause between
+native tool calls. These figures are elapsed intervals, not binding durations.
+Compaction is not a proven cause of the URL denial. Successful product and
+startup tests remain valid, but cold native-launch reliability is unresolved.
+The optional timing patch remains a candidate workaround, not a complete repair.
 
 ## 1. WSL project paths
 

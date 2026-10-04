@@ -396,10 +396,10 @@ their sanitized reports and retains the later troubleshooting-chat failure.
 
 Checkpoint 75's original error was preserved. No native GUI call or reset
 followed it. Its unexpectedly long call interval makes it a delayed-capture
-failure, not a matched reproduction of the historical timing. The timestamps
-do not establish why the interval grew or whether elapsed time caused the
-native denial. Longer startup waits, non-browser warm-up and grouping calls
-cannot be claimed as universal repairs from these results.
+failure, not a matched reproduction of the historical timing. Checkpoint 77's
+session-trace audit below explains the long inter-call pause, without proving
+that it caused the native denial. Longer startup waits, non-browser warm-up and
+grouping calls cannot be claimed as universal repairs from these results.
 
 Confidence is **high** in the recorded complete product and independent startup
 passes, and **high** that a native first-capture failure still occurred in this
@@ -407,6 +407,38 @@ configuration. Confidence is **low** in a complete cold-start repair or a
 specific internal cause. The goal remains incomplete. A subsequent authorized
 fresh-turn diagnostic should measure actual timing within a bounded sequence
 and compare window-binding freshness, without bypassing native URL checks.
+
+### Timing autopsy: compaction interrupted the test sequence
+
+Checkpoint 77 inspected the original session's tool execution records rather
+than inferring latency from checkpoint timestamps. The checkpoint-54 selection
+and binding tool call lasted **94.921 ms**. Its **13.474-second** figure measured
+the subsequent interval from completed binding to the first capture request;
+it did not measure binding performance.
+
+The checkpoint-75 script intended to wait 13.474 seconds after binding, but it
+split launch, binding and activation/capture into separate native tool calls.
+Its outer orchestrator yielded. A recorded `ContextCompaction` ran from
+17:16:09.114 to 17:19:33.172 UTC, lasting **204.058 seconds** and overlapping
+the remainder of binding and the following gap. The capture tool was dispatched
+at 17:19:33.234, 62 ms after compaction completed. First capture started at
+17:19:33.384, **196.816 seconds** after binding. The activation/capture tool
+failed in **2.215 seconds**, including the installed two-second settling delay.
+
+This is strong evidence that conversation compaction interrupted the planned
+inter-call schedule. It is not evidence that Chrome spent 197 seconds binding,
+or that compaction caused the subsequent URL-confidence failure. The pause's
+internal latency breakdown and the native denial's internal branch remain
+unverified. The failed matched-timing experiment must not support a causal
+timing claim.
+
+The next timing comparison should use one bounded `node_repl` JavaScript call
+with actual phase timings and an abort when the intended interval is missed.
+Putting multiple native tool calls in one `functions.exec` is insufficient to
+control this interruption. Retained versus freshly selected window binding can
+then be compared under matching observed timing. Confidence is **high** that
+this improves experimental control, and **low** that it alone repairs native
+URL verification. No runtime or native policy change follows from this audit.
 
 ## What the evidence currently establishes
 
