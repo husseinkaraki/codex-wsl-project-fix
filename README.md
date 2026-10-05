@@ -43,6 +43,15 @@ Compaction is not a proven cause of the URL denial. Successful product and
 startup tests remain valid, but cold native-launch reliability is unresolved.
 The optional timing patch remains a candidate workaround, not a complete repair.
 
+**Native source audit on October 5:** static inspection located the exact
+URL-confidence stop in the bundled Windows helper, beyond the readable Sky
+JavaScript client. It uses a different branch from denied URLs and failed site
+policy verification. The helper also recognizes `ComputerUseAllowForbiddenTargets`
+in application filtering and contains an internal testing control that skips
+URL enforcement; neither is a validated URL-extraction repair. See the
+[source audit](./docs/computer-use-investigation.md#native-url-enforcement-source-audit-october-5).
+No override or new GUI test was run for this audit.
+
 ## 1. WSL project paths
 
 An unofficial, temporary workaround for

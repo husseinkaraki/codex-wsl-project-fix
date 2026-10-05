@@ -1,6 +1,6 @@
 # Native Computer Use with a WSL agent: investigation
 
-Updated: 2026-10-03. Status: **complete native dev-product acceptance passed in
+Updated: 2026-10-05. Status: **complete native dev-product acceptance passed in
 the affected WSL-backed chat using existing Windows Chrome. Authentication,
 uploads, actual Stripe sandbox payment, recovery, GUI downloads, native
 playback/seek and receipt were exercised through standard `@oai/sky`.
@@ -15,6 +15,83 @@ WSL. Completion requires verified typing, navigation, and mouse clicking in
 that affected chat, followed by a successful test in another fresh turn and
 the actual deployed product flow using the native controller. A successful
 Playwright product test is separate evidence.
+
+### Native URL enforcement source audit, October 5
+
+Checkpoint 79 located the exact Windows URL-confidence error in the official
+helper packaged with Sky 0.7.5 in runtime cache `45309f9050f7314b`. The audit
+read the installed client and statically inspected the source-declared native
+executable. It did not launch the helper independently, send a custom protocol
+request, change configuration or perform another GUI test.
+
+The observed call boundary is:
+
+```text
+WSL agent -> Windows node_repl -> Sky JavaScript RPC/service
+          -> WindowsHelperTransport -> bundled native Windows helper
+          -> native URL-result dispatch and policy check -> result/error
+```
+
+The JavaScript client forwards `get_window_state` and propagates the returned
+helper error. The URL decision occurs in the native executable, rather than
+being a confidence judgment made by the agent model. This native build contains
+four separate stop messages and branches:
+
+| Native outcome | Evidence and implication |
+| --- | --- |
+| Current URL cannot be determined with enough confidence | Our recorded error. A discrete native URL-result dispatch selects this message before the later site-policy verification path |
+| Browser URL enforcement unsupported | A separate native URL-result dispatch outcome; not the message emitted by our failing capture |
+| Current URL not allowed | Separate denied-URL result; do not treat the recorded confidence error as proof the site was forbidden |
+| Current URL policy cannot be verified | Separate verification-failure result; do not assume a remote policy-service failure produced our confidence message |
+
+The inspected helper is 1,551,152 bytes, with SHA-256
+`6eeaf314a15936e549e47532e8dc62a01920bd38d65e7797e1c812e62199a741`.
+For this exact artifact, the native URL guard spans virtual addresses
+`0x14007737b` to `0x14007a50a`. Its dispatch table at `0x140129dec` selects
+the confidence-error branch at `0x14007754b` for index 2 and the unsupported
+browser branch at `0x14007755a` for index 3. These are static audit references,
+not portable patch offsets or an installation procedure.
+
+The reply's preference name was also found in executable code. This revises
+checkpoint 78's narrower finding that its presence in the official Windows
+helper had not been verified.
+
+| Control | Verified scope | Relevance to URL extraction |
+| --- | --- | --- |
+| `ComputerUseAllowForbiddenTargets` | Recognized in a native application-filtering/configuration branch, in a different function from the URL guard | Its presence is verified. No evidence establishes that it supplies a missing Chrome URL or fixes extraction. The independent community clone's environment-variable behavior must not be assumed for this implementation |
+| `x-codex-browser-use-security-mode` | The native guard checks request metadata for an internal local-testing mode and can return success before URL-result dispatch | Skips enforcement; does not repair extraction. Not enabled, tested or promoted as a fix |
+| `SKY_CUA_NATIVE_PIPE` and `SKY_CUA_NATIVE_PIPE_DIRECTORY` | Readable Windows Sky code selects the transport and pipe location | Connection controls, with no corresponding confidence threshold in the reviewed client |
+| `SKY_ENABLE_AUDIO` | Readable Windows client exposes audio methods | Unrelated to browser URL detection |
+| `OAI_SKY_CONFIG_PATH` | Readable Sky code loads target/launch options | No URL-confidence setting established by this loader |
+| Public app/origin permission configuration | The public CLI exposes default app access, Windows executable/AUMID rules and browser origin permissions | Defines access rules; the reviewed schema exposes no native URL-confidence threshold |
+
+The public source audit was pinned to Codex `rust-v0.160.0`, commit
+[`a956835d020762cb2b570053af06f643a11c0ecc`](https://github.com/openai/codex/tree/a956835d020762cb2b570053af06f643a11c0ecc),
+matching the configured Windows bridge CLI version. The
+[computer-use schema](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/config/src/computer_use.rs),
+[browser-use schema](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/config/src/browser_use.rs)
+and
+[managed requirements](https://github.com/openai/codex/blob/a956835d020762cb2b570053af06f643a11c0ecc/codex-rs/config/src/browser_computer_use_requirements.rs)
+were read. Across that extracted release's 8,775 regular files, neither the
+exact stop message nor the two internal preference/metadata names was found.
+This scopes the negative result to that public release; it is not proof that
+no other flag exists in any build.
+
+The native executable includes Rust source-path markers such as
+`src/policy/url_policy.rs`, `src/policy/auth.rs`, `src/policy/managed.rs` and
+`src/accessibility.rs`. The corresponding native implementation was absent
+from the matching public release and the installed readable client. The helper
+has no symbol table or debug directory. Disassembly locates branches, but is
+not the original Rust source and does not expose the failing run's URL candidates.
+
+Confidence is **very high** in the native error boundary and **high** in the
+separation of unresolved URL, unsupported browser, denied URL and verification
+failure. The remaining question is why the browser observation yields the
+unresolved-URL result: unavailable URL candidates, window/tab association and
+initialization remain hypotheses. No supported confidence threshold or complete
+URL-extraction repair has been established. The next useful diagnostic must
+observe candidate/association state while keeping native enforcement enabled;
+successful tests with enforcement skipped would not validate this repair.
 
 ### Latest regression and revised candidate
 
@@ -837,8 +914,10 @@ in both capture modes after the bridge was matched to CLI 0.160.0. The later
 existing-window native product test passed the complete dev Stripe workflow.
 That does not resolve fresh-helper startup. Confidence is **high** in the recorded
 outcomes, **medium-low** in the revised timing candidate as a complete fix, and
-**low** in a specific internal cause. The supported API does not expose enough
-of URL extraction, window association or validation to distinguish them yet.
+**low** in a specific extraction cause. The October 5 static audit above locates
+the unresolved-URL native dispatch and separates it from site-denial and policy
+verification branches. The supported API still does not expose the failing
+run's URL candidates or window/tab association needed to explain that outcome.
 
 The complete-accessibility/current-settler combination passed a public flow in
 an existing helper session. Default-mode cold controls also passed there, but
